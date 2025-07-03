@@ -37,10 +37,11 @@ import {
   IconifyIconOnline,
   FontIcon
 } from "./components/ReIcon";
+const { VITE_ENV_MODE } = import.meta.env;
 app.component("IconifyIconOffline", IconifyIconOffline);
 app.component("IconifyIconOnline", IconifyIconOnline);
 app.component("FontIcon", FontIcon);
-
+console.log(`当前开发模式：${VITE_ENV_MODE}`);
 // 全局注册按钮级别权限组件
 import { Auth } from "@/components/ReAuth";
 import { Perms } from "@/components/RePerms";
