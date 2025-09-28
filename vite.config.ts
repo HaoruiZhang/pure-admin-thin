@@ -31,6 +31,7 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
       }
     },
     plugins: getPluginsList(VITE_CDN, VITE_COMPRESSION),
+
     // https://cn.vitejs.dev/config/dep-optimization-options.html#dep-optimization-options
     optimizeDeps: {
       include,
