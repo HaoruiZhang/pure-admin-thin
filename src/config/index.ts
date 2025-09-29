@@ -2,7 +2,14 @@ import axios from "axios";
 import type { App } from "vue";
 
 let config: object = {};
-// const { VITE_PUBLIC_PATH } = import.meta.env;
+const { VITE_PUBLIC_PATH } = import.meta.env;
+
+// Sanitize VITE_PUBLIC_PATH to prevent path traversal
+function sanitizePublicPath(path: string): string {
+  // Only allow alphanumeric, dash, underscore, and forward slash, and ensure it starts with /
+  const sanitized = path.replace(/[^a-zA-Z0-9/_-]/g, "");
+  return sanitized.startsWith("/") ? sanitized : "/" + sanitized;
+}
 
 const setConfig = (cfg?: unknown) => {
   config = Object.assign(config, cfg);
@@ -31,7 +38,7 @@ export const getPlatformConfig = async (app: App): Promise<undefined> => {
   app.config.globalProperties.$config = getConfig();
   return axios({
     method: "get",
-    url: `platform-config.json`
+    url: `${sanitizePublicPath(VITE_PUBLIC_PATH)}/platform-config.json`
   })
     .then(({ data: config }) => {
       let $config = app.config.globalProperties.$config;
