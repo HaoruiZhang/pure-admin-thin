@@ -53,6 +53,7 @@ const modules: Record<string, any> = import.meta.glob(
 const routes = [];
 
 Object.keys(modules).forEach(key => {
+  console.log(key, modules[key].default);
   routes.push(modules[key].default);
 });
 

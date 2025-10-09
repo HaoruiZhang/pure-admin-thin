@@ -6,7 +6,7 @@ export default {
   path: "/",
   name: "Home",
   component: Layout,
-  redirect: "/welcome",
+  redirect: "/ui",
   meta: {
     icon: "ep/home-filled",
     title: $t("menus.pureHome"),

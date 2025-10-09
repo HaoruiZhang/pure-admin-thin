@@ -25,6 +25,7 @@ import RightArrow from "~icons/ri/arrow-right-s-line?width=20&height=20";
 import DayIcon from "@/assets/svg/day.svg?component";
 import DarkIcon from "@/assets/svg/dark.svg?component";
 import SystemIcon from "@/assets/svg/system.svg?component";
+const { VITE_SHOW_MORE_SETTING } = import.meta.env;
 
 const { t } = useI18n();
 const { device } = useNav();
@@ -34,7 +35,14 @@ const { $storage } = useGlobal<GlobalPropertiesApi>();
 const mixRef = ref();
 const verticalRef = ref();
 const horizontalRef = ref();
+const showMoreConfig = ref(VITE_SHOW_MORE_SETTING || false);
 
+console.log(
+  "VITE_SHOW_MORE_SETTING",
+  VITE_SHOW_MORE_SETTING,
+  showMoreConfig.value,
+  Boolean(VITE_SHOW_MORE_SETTING.value)
+);
 const {
   dataTheme,
   overallStyle,
@@ -354,47 +362,49 @@ onUnmounted(() => removeMatchMedia);
         </li>
       </ul>
 
-      <p :class="['mt-5!', pClass]">{{ t("panel.pureLayoutModel") }}</p>
-      <ul class="pure-theme">
-        <li
-          ref="verticalRef"
-          v-tippy="{
-            content: t('panel.pureVerticalTip'),
-            zIndex: 41000
-          }"
-          :class="layoutTheme.layout === 'vertical' ? 'is-select' : ''"
-          @click="setLayoutModel('vertical')"
-        >
-          <div />
-          <div />
-        </li>
-        <li
-          v-if="device !== 'mobile'"
-          ref="horizontalRef"
-          v-tippy="{
-            content: t('panel.pureHorizontalTip'),
-            zIndex: 41000
-          }"
-          :class="layoutTheme.layout === 'horizontal' ? 'is-select' : ''"
-          @click="setLayoutModel('horizontal')"
-        >
-          <div />
-          <div />
-        </li>
-        <li
-          v-if="device !== 'mobile'"
-          ref="mixRef"
-          v-tippy="{
-            content: t('panel.pureMixTip'),
-            zIndex: 41000
-          }"
-          :class="layoutTheme.layout === 'mix' ? 'is-select' : ''"
-          @click="setLayoutModel('mix')"
-        >
-          <div />
-          <div />
-        </li>
-      </ul>
+      <template v-if="showMoreConfig">
+        <p :class="['mt-5!', pClass]">{{ t("panel.pureLayoutModel") }}</p>
+        <ul class="pure-theme">
+          <li
+            ref="verticalRef"
+            v-tippy="{
+              content: t('panel.pureVerticalTip'),
+              zIndex: 41000
+            }"
+            :class="layoutTheme.layout === 'vertical' ? 'is-select' : ''"
+            @click="setLayoutModel('vertical')"
+          >
+            <div />
+            <div />
+          </li>
+          <li
+            v-if="device !== 'mobile'"
+            ref="horizontalRef"
+            v-tippy="{
+              content: t('panel.pureHorizontalTip'),
+              zIndex: 41000
+            }"
+            :class="layoutTheme.layout === 'horizontal' ? 'is-select' : ''"
+            @click="setLayoutModel('horizontal')"
+          >
+            <div />
+            <div />
+          </li>
+          <li
+            v-if="device !== 'mobile'"
+            ref="mixRef"
+            v-tippy="{
+              content: t('panel.pureMixTip'),
+              zIndex: 41000
+            }"
+            :class="layoutTheme.layout === 'mix' ? 'is-select' : ''"
+            @click="setLayoutModel('mix')"
+          >
+            <div />
+            <div />
+          </li>
+        </ul>
+      </template>
 
       <span v-if="useAppStoreHook().getViewportWidth > 1280">
         <p :class="['mt-5!', pClass]">{{ t("panel.pureStretch") }}</p>
@@ -438,84 +448,92 @@ onUnmounted(() => removeMatchMedia);
         </button>
       </span>
 
-      <p :class="['mt-4!', pClass]">{{ t("panel.pureTagsStyle") }}</p>
-      <Segmented
-        resize
-        class="select-none"
-        :modelValue="markValue === 'smart' ? 0 : markValue === 'card' ? 1 : 2"
-        :options="markOptions"
-        @change="onChange"
-      />
+      <template v-if="showMoreConfig">
+        <p :class="['mt-4!', pClass]">
+          {{ t("panel.pureTagsStyle") }}
+        </p>
+        <Segmented
+          resize
+          class="select-none"
+          :modelValue="markValue === 'smart' ? 0 : markValue === 'card' ? 1 : 2"
+          :options="markOptions"
+          @change="onChange"
+        />
+      </template>
 
-      <p class="mt-5! font-medium text-sm dark:text-white">
-        {{ t("panel.pureInterfaceDisplay") }}
-      </p>
-      <ul class="setting">
-        <li>
-          <span class="dark:text-white">{{ t("panel.pureGreyModel") }}</span>
-          <el-switch
-            v-model="settings.greyVal"
-            inline-prompt
-            :active-text="t('buttons.pureOpenText')"
-            :inactive-text="t('buttons.pureCloseText')"
-            @change="greyChange"
-          />
-        </li>
-        <li>
-          <span class="dark:text-white">{{ t("panel.pureWeakModel") }}</span>
-          <el-switch
-            v-model="settings.weakVal"
-            inline-prompt
-            :active-text="t('buttons.pureOpenText')"
-            :inactive-text="t('buttons.pureCloseText')"
-            @change="weekChange"
-          />
-        </li>
-        <li>
-          <span class="dark:text-white">{{ t("panel.pureHiddenTags") }}</span>
-          <el-switch
-            v-model="settings.tabsVal"
-            inline-prompt
-            :active-text="t('buttons.pureOpenText')"
-            :inactive-text="t('buttons.pureCloseText')"
-            @change="tagsChange"
-          />
-        </li>
-        <li>
-          <span class="dark:text-white">{{ t("panel.pureHiddenFooter") }}</span>
-          <el-switch
-            v-model="settings.hideFooter"
-            inline-prompt
-            :active-text="t('buttons.pureOpenText')"
-            :inactive-text="t('buttons.pureCloseText')"
-            @change="hideFooterChange"
-          />
-        </li>
-        <li>
-          <span class="dark:text-white">Logo</span>
-          <el-switch
-            v-model="logoVal"
-            inline-prompt
-            :active-value="true"
-            :inactive-value="false"
-            :active-text="t('buttons.pureOpenText')"
-            :inactive-text="t('buttons.pureCloseText')"
-            @change="logoChange"
-          />
-        </li>
-        <li>
-          <span class="dark:text-white">
-            {{ t("panel.pureMultiTagsCache") }}
-          </span>
-          <el-switch
-            v-model="settings.multiTagsCache"
-            inline-prompt
-            :active-text="t('buttons.pureOpenText')"
-            :inactive-text="t('buttons.pureCloseText')"
-            @change="multiTagsCacheChange"
-          />
-        </li>
-      </ul>
+      <template v-if="showMoreConfig">
+        <p class="mt-5! font-medium text-sm dark:text-white">
+          {{ t("panel.pureInterfaceDisplay") }}
+        </p>
+        <ul class="setting">
+          <li>
+            <span class="dark:text-white">{{ t("panel.pureGreyModel") }}</span>
+            <el-switch
+              v-model="settings.greyVal"
+              inline-prompt
+              :active-text="t('buttons.pureOpenText')"
+              :inactive-text="t('buttons.pureCloseText')"
+              @change="greyChange"
+            />
+          </li>
+          <li>
+            <span class="dark:text-white">{{ t("panel.pureWeakModel") }}</span>
+            <el-switch
+              v-model="settings.weakVal"
+              inline-prompt
+              :active-text="t('buttons.pureOpenText')"
+              :inactive-text="t('buttons.pureCloseText')"
+              @change="weekChange"
+            />
+          </li>
+          <li>
+            <span class="dark:text-white">{{ t("panel.pureHiddenTags") }}</span>
+            <el-switch
+              v-model="settings.tabsVal"
+              inline-prompt
+              :active-text="t('buttons.pureOpenText')"
+              :inactive-text="t('buttons.pureCloseText')"
+              @change="tagsChange"
+            />
+          </li>
+          <li>
+            <span class="dark:text-white">{{
+              t("panel.pureHiddenFooter")
+            }}</span>
+            <el-switch
+              v-model="settings.hideFooter"
+              inline-prompt
+              :active-text="t('buttons.pureOpenText')"
+              :inactive-text="t('buttons.pureCloseText')"
+              @change="hideFooterChange"
+            />
+          </li>
+          <li>
+            <span class="dark:text-white">Logo</span>
+            <el-switch
+              v-model="logoVal"
+              inline-prompt
+              :active-value="true"
+              :inactive-value="false"
+              :active-text="t('buttons.pureOpenText')"
+              :inactive-text="t('buttons.pureCloseText')"
+              @change="logoChange"
+            />
+          </li>
+          <li>
+            <span class="dark:text-white">
+              {{ t("panel.pureMultiTagsCache") }}
+            </span>
+            <el-switch
+              v-model="settings.multiTagsCache"
+              inline-prompt
+              :active-text="t('buttons.pureOpenText')"
+              :inactive-text="t('buttons.pureCloseText')"
+              @change="multiTagsCacheChange"
+            />
+          </li>
+        </ul>
+      </template>
     </div>
   </LayPanel>
 </template>

@@ -63,6 +63,7 @@ panel:
 menus:
   pureHome: Home
   pureLogin: Login
+  pureADK: ADK
   pureAbnormal: Abnormal Page
   pureFourZeroFour: "404"
   pureFourZeroOne: "403"

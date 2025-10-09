@@ -151,6 +151,7 @@ function addPathMatch() {
 
 /** 处理动态路由（后端返回的路由） */
 function handleAsyncRoutes(routeList) {
+  console.log("后端返回的路由", routeList);
   if (routeList.length === 0) {
     usePermissionStoreHook().handleWholeMenus(routeList);
   } else {
@@ -195,6 +196,10 @@ function handleAsyncRoutes(routeList) {
 function initRouter() {
   if (getConfig()?.CachingAsyncRoutes) {
     // 开启动态路由缓存本地localStorage
+    console.log(
+      "开启了动态路由缓存本地localStorage",
+      getConfig()?.CachingAsyncRoutes
+    );
     const key = "async-routes";
     const asyncRouteList = storageLocal().getItem(key) as any;
     if (asyncRouteList && asyncRouteList?.length > 0) {
@@ -212,6 +217,10 @@ function initRouter() {
       });
     }
   } else {
+    console.log(
+      "未开启动态路由缓存本地localStorage",
+      getConfig()?.CachingAsyncRoutes
+    );
     return new Promise(resolve => {
       getAsyncRoutes().then(({ data }) => {
         handleAsyncRoutes(cloneDeep(data));

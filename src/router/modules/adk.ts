@@ -10,12 +10,12 @@ export default {
   meta: {
     icon: "ep/home-filled",
     title: $t("menus.pureADK"),
-    rank: 0
+    rank: 1
   },
   children: [
     {
       path: "/ui",
-      name: "ui",
+      name: "ADK-UI",
       component: () => import("@/views/adk/index.vue"),
       meta: {
         title: $t("menus.pureADK"),
