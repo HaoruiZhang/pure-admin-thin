@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { ElSplitter, ElSplitterPanel } from "element-plus";
 import LeftSidePanel from "./components/LeftSidePanel.vue";
 import MainArea from "./components/MainArea.vue";
-import { ElSplitter, ElSplitterPanel } from "element-plus";
+
 defineOptions({
   name: "ADK"
 });

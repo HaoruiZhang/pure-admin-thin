@@ -133,7 +133,17 @@ onUnmounted(() => {
             <div class="mat-col AI-mat">
               <el-button v-if="item.author !== 'user'">StAgent </el-button>
             </div>
-            <div class="content-box dark:text-white!">
+            <div
+              :class="[
+                'content-box',
+                'dark:text-white!',
+                {
+                  function:
+                    item.content.parts[0].functionCall ||
+                    item.content.parts[0].functionResponse
+                }
+              ]"
+            >
               <div v-if="item.content.parts[0].functionCall">
                 {{ item.content.parts[0].functionCall?.name }}
               </div>
@@ -226,6 +236,11 @@ onUnmounted(() => {
 
       &.from-user {
         justify-content: flex-end;
+
+        .content-box {
+          width: unset;
+          max-width: calc(100% - 176px);
+        }
       }
 
       .mat-col {
@@ -241,8 +256,12 @@ onUnmounted(() => {
       }
 
       .content-box {
-        max-width: calc(100% - 180px);
+        width: calc(100% - 176px);
         padding: 12px 16px;
+
+        /* flex: 1; */
+
+        /* width: 100%; */
 
         /* background-color: var(--el-bg-color-light); */
         font-family: Roboto, sans-serif;
@@ -253,6 +272,11 @@ onUnmounted(() => {
         word-break: break-word;
         border-radius: 8px;
         box-shadow: rgb(199 199 199 / 50%) 0 2px 8px 0;
+
+        &.function {
+          width: unset;
+          max-width: calc(100% - 176px);
+        }
       }
 
       /* 代码块设置 */
@@ -273,6 +297,14 @@ onUnmounted(() => {
       }
     }
   }
+
+  /* ol,
+  ul,
+  menu {
+    padding: unset;
+    margin: unset;
+    list-style: unset;
+  } */
 }
 </style>
 <style scoped>
