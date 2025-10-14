@@ -18,6 +18,9 @@ buttons:
   pureBackTop: BackTop
   pureOpenText: Open
   pureCloseText: Close
+  copy: Copy
+  copied: Copied Successfully
+  copyError: Copy Failed
 search:
   pureTotal: Total
   pureHistory: History
