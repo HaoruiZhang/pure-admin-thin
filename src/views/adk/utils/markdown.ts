@@ -3,7 +3,7 @@ import { i18n } from "@/plugins/i18n";
 import hljs from "highlight.js";
 
 import MarkdownIt from "markdown-it";
-import "highlight.js/styles/an-old-hope.css"; // 选择你喜欢的样式
+import "highlight.js/styles/an-old-hope.css"; // 选择你喜欢的样式 color-brewer
 import MarkdownItCollapsible from "markdown-it-collapsible";
 import MarkdownItDirective from "markdown-it-directive";
 import MarkdownItWebcomponents from "markdown-it-directive-webcomponents";

@@ -231,7 +231,7 @@ onUnmounted(() => {
       align-items: center;
       justify-content: flex-start;
       width: 100%;
-      padding: 16px;
+      padding: 16px 12px;
       margin: 4px 0;
 
       &.from-user {

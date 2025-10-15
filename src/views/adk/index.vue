@@ -27,7 +27,7 @@ defineOptions({
     "
   >
     <el-splitter>
-      <el-splitter-panel :min="200" :max="500" size="20%">
+      <el-splitter-panel :min="200" :max="500" :size="280">
         <LeftSidePanel />
       </el-splitter-panel>
 
