@@ -20,8 +20,8 @@ const defaultConfig: AxiosRequestConfig = {
   timeout: 10000,
   headers: {
     Accept: "application/json, text/plain, */*",
-    "Content-Type": "application/json",
-    "X-Requested-With": "XMLHttpRequest"
+    "Content-Type": "application/json"
+    // "X-Requested-With": "XMLHttpRequest"
   },
   // 数组格式参数序列化（https://github.com/axios/axios/issues/5142）
   paramsSerializer: {
@@ -30,7 +30,8 @@ const defaultConfig: AxiosRequestConfig = {
 };
 
 class PureHttp {
-  constructor() {
+  constructor(config: any = defaultConfig) {
+    this.axiosInstance = Axios.create(config);
     this.httpInterceptorsRequest();
     this.httpInterceptorsResponse();
   }
@@ -45,7 +46,7 @@ class PureHttp {
   private static initConfig: PureHttpRequestConfig = {};
 
   /** 保存当前`Axios`实例对象 */
-  private static axiosInstance: AxiosInstance = Axios.create(defaultConfig);
+  private axiosInstance: AxiosInstance;
 
   /** 重连原始请求 */
   private static retryOriginalRequest(config: PureHttpRequestConfig) {
@@ -59,7 +60,7 @@ class PureHttp {
 
   /** 请求拦截 */
   private httpInterceptorsRequest(): void {
-    PureHttp.axiosInstance.interceptors.request.use(
+    this.axiosInstance.interceptors.request.use(
       async (config: PureHttpRequestConfig): Promise<any> => {
         // 开启进度条动画
         NProgress.start();
@@ -117,8 +118,8 @@ class PureHttp {
 
   /** 响应拦截 */
   private httpInterceptorsResponse(): void {
-    const instance = PureHttp.axiosInstance;
-    instance.interceptors.response.use(
+    // const instance = PureHttp.axiosInstance;
+    this.axiosInstance.interceptors.response.use(
       (response: PureHttpResponse) => {
         const $config = response.config;
         // 关闭进度条动画
@@ -158,10 +159,10 @@ class PureHttp {
       ...param,
       ...axiosConfig
     } as PureHttpRequestConfig;
-
+    console.log("▶️ PureHttp post params:", config);
     // 单独处理自定义请求/响应回调
     return new Promise((resolve, reject) => {
-      PureHttp.axiosInstance
+      this.axiosInstance
         .request(config)
         .then((response: undefined) => {
           resolve(response);
@@ -178,6 +179,7 @@ class PureHttp {
     params?: AxiosRequestConfig<P>,
     config?: PureHttpRequestConfig
   ): Promise<T> {
+    console.log("▶️ PureHttp post params:", params);
     return this.request<T>("post", url, params, config);
   }
 
@@ -192,3 +194,15 @@ class PureHttp {
 }
 
 export const http = new PureHttp();
+export const agentHttp = new PureHttp({
+  ...defaultConfig,
+  baseURL:
+    localStorage.getItem("backendUrl") ||
+    import.meta.env.VITE_URL_AGENT_BACKEND,
+  withCredentials: false
+});
+export const adkHttp = new PureHttp({
+  ...defaultConfig,
+  baseURL: import.meta.env.VITE_URL_ADK_BACKEND,
+  withCredentials: false
+});

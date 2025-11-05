@@ -16,3 +16,4 @@ export * from "./markdown";
 // export * from "./object-url";
 // export * from "./pdf-pages";
 // export * from "./get-file -extension";
+export * from "./adk-tool";

@@ -93,3 +93,34 @@ login:
   pureUsernameReg: 请输入账号
   purePassWordReg: 请输入密码
   purePassWordRuleReg: 密码格式应为8-18位数字、字母、符号的任意两种组合
+adkChat:
+  pureNewChat: 新建对话
+  pureInputPlaceholder: 请输入您的问题...
+  pureRegenerate: 重新生成
+  pureStopGenerating: 停止生成
+  pureLoading: 助手思考中...
+  pureSelectQuestion: 选择一个常见问题
+  pureClearChatConfirm: 确认清空当前对话吗？
+  pureClearChat: 清空对话
+  pureExportMd: 导出Markdown
+  pureExportHtml: 导出HTML
+  pureCopySuccess: 复制成功
+  pureCopyFail: 复制失败
+  pureSelectPlugins: 选择插件
+  pureNoPlugins: 暂无可用插件
+  pureSelectKnowledgeBase: 选择知识库
+  pureNoKnowledgeBase: 暂无可用知识库
+  pureArticleTitle: 文章标题
+  pureSaveArticleSuccess: 文章保存成功
+  pureSaveArticleFail: 文章保存失败
+  pureCreateArticle: 创建文章
+  pureEditArticle: 编辑文章
+  pureDeleteArticle: 删除文章
+  pureDeleteArticleConfirm: 确认删除该文章吗？此操作不可撤销。
+  pureNoArticles: 暂无文章，请创建新文章。
+  pureWritingTitle: 编写标题
+  pureSelectWriting: 选择写作
+  pureCreateWriting: 创建写作
+  pureEditWriting: 编辑写作
+  pureDeleteWriting: 删除写作
+  pureDeleteWritingConfirm: 确认删除该写作吗？此操作不可

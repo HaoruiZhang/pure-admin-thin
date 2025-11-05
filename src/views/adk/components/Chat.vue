@@ -20,7 +20,7 @@ defineOptions({
         :resizable="false"
         class="chat-input-buttons"
       >
-        <div style=" display: flex; /* gap: 0px; */width: 100%; height: 100%;">
+        <div style="display: flex; /* gap: 0px; */ width: 100%; height: 100%">
           <el-button> AI文档解析 </el-button>
           <el-button> AI图片解析 </el-button>
           <el-button> AI报告解读 </el-button>
@@ -81,7 +81,6 @@ defineOptions({
           #5b04fe 20.32%,
           #5f0085 86.84%
         );
-        background-clip: text;
         background-clip: text;
         -webkit-text-fill-color: transparent;
       }

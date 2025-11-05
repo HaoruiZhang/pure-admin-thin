@@ -1,15 +1,28 @@
 <script setup lang="ts">
 import { ElSplitter, ElSplitterPanel } from "element-plus";
+import { onMounted } from "vue";
+import { storeToRefs } from "pinia";
 import LeftSidePanel from "./components/LeftSidePanel.vue";
 import MainArea from "./components/MainArea.vue";
+import { useADKChatStore } from "@/store";
+import { adkService } from "@/api/adk.service";
+const adkStore = useADKChatStore();
+const { session_list, sendLoading, currentSession } = storeToRefs(adkStore);
 
+const emit = defineEmits(["getDetail"]);
 defineOptions({
   name: "ADK"
+});
+
+onMounted(() => {
+  console.log("▶️ ADK index mounted");
+  adkStore.getSessionList();
 });
 </script>
 
 <template>
   <div
+    class="adk-chat-container"
     style="
       width: 100%;
       height: calc(100% - 4px);

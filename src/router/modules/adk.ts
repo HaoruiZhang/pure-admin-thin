@@ -1,12 +1,12 @@
 import { $t } from "@/plugins/i18n";
-const { VITE_HIDE_HOME } = import.meta.env;
+// const { VITE_HIDE_HOME } = import.meta.env;
 const Layout = () => import("@/layout/index.vue");
 
 export default {
   path: "/adk",
   name: "ADK",
   component: Layout,
-  redirect: "/ui",
+  redirect: "/adk-ui",
   meta: {
     icon: "ep/home-filled",
     title: $t("menus.pureADK"),
@@ -14,12 +14,12 @@ export default {
   },
   children: [
     {
-      path: "/ui",
+      path: "/adk-ui",
       name: "ADK-UI",
       component: () => import("@/views/adk/index.vue"),
       meta: {
         title: $t("menus.pureADK"),
-        showLink: VITE_HIDE_HOME === "true" ? false : true
+        showLink: true
       }
     }
   ]

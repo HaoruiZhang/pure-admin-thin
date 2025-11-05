@@ -93,3 +93,40 @@ login:
   pureUsernameReg: Please enter username
   purePassWordReg: Please enter password
   purePassWordRuleReg: The password format should be any combination of 8-18 digits
+adkChat:
+  pureNewChat: New Chat
+  pureInputPlaceholder: How can I assist you today?
+  pureSelectModel: Select Model
+  pureSelectPlugin: Select Plugin
+  pureLoadingModels: Loading Models...
+  pureLoadingPlugins: Loading Plugins...
+  pureSend: Send
+  pureTyping: Typing...
+  pureModel: Model
+  purePlugin: Plugin
+  pureSessionList: Session List
+  pureClearSessions: Clear Sessions
+  pureClearSessionsConfirm: Are you sure you want to clear all sessions? This action cannot be undone.
+  pureWritingTitle: Writing Title
+  pureSelectWriting: Select Writing
+  pureCreateWriting: Create Writing
+  pureEditWriting: Edit Writing
+  pureDeleteWriting: Delete Writing
+  pureDeleteWritingConfirm: Are you sure you want to delete this writing? This action cannot be undone.
+  pureNoWritings: No Writings Available. Please create a new writing.
+  pureRegenerate: Regenerate
+  pureStopGenerating: Stop Generating
+  pureLoading: Assistant is thinking...
+  pureSelectQuestion: Select a common question
+  pureClearChatConfirm: Are you sure you want to clear the current chat?
+  pureClearChat: Clear Chat
+  pureExportMd: Export Markdown
+  pureExportHtml: Export HTML
+  pureCopySuccess: Copy Success
+  pureCopyFail: Copy Fail
+  pureSelectPlugins: Select Plugins
+  pureNoPlugins: No Available Plugins
+  pureSelectKnowledgeBase: Select Knowledge Base
+  pureNoKnowledgeBase: No Available Knowledge Base
+  pureArticleTitle: Article Title
+  pureSaveArticleSuccess: Article Saved Successfully

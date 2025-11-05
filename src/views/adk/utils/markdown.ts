@@ -80,7 +80,7 @@ export const md: MarkdownIt = new MarkdownIt({
         "</code>";
       codeDom.innerHTML = codeHtml;
       return (
-        `<div class="code-header"><div>${language || ""}</div><div class="action"><div class="code-copy" onClick="onCopyClick(this)"> ${t("buttons.copy")}</div></div></div></div>` +
+        `<div class="code-header"><div>${language || ""}</div><div class="action"><div class="code-copy" onClick="onCopyClick(this)"> ${t("buttons.copy")}</div></div></div>` +
         codeDom.outerHTML
       );
     } catch (e: any) {

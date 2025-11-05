@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, nextTick, onUnmounted } from "vue";
 import { sessionRes } from "./sessionRes";
-import { md } from "../utils/markdown";
+import { md, mdNoBtn } from "../utils/markdown";
 import { onCopyDom } from "../utils";
 
 interface ObjectAny {
@@ -432,11 +432,6 @@ onUnmounted(() => {
       background: #939cab;
     }
   }
-
-  /* .code-copy::before {
-    mask-image: url("@/assets/svgIcons/copilot/copy.svg");
-    -webkit-mask-image: url("@/assets/svgIcons/copilot/copy.svg");
-  } */
 }
 
 /* :deep(.hljs) {
@@ -613,8 +608,7 @@ onUnmounted(() => {
       justify-content: space-between;
       grid-template-columns: repeat(auto-fill, calc(50% - 4px));
       .question-item {
-        background-image: url("@/assets/img/copilot/recommend-bg.png");
-        background-repeat: no-repeat;
+         background-repeat: no-repeat;
         background-position: center;
         background-size: cover;
         height: 78px;

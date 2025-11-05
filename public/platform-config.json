@@ -1,7 +1,7 @@
 {
   "Version": "6.0.0",
   "Title": "PureAdmin",
-  "FixedHeader": true,
+  "FixedHeader": false,
   "HiddenSideBar": false,
   "MultiTagsCache": false,
   "KeepAlive": true,

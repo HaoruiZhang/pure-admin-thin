@@ -162,7 +162,9 @@ const transitionMain = defineComponent({
               </div>
               <LayFooter v-if="!hideFooter" />
             </el-scrollbar>
-            <div v-else class="grow">
+            <!---->
+
+            <div v-else class="grow" style="height: 100%">
               <transitionMain :route="route">
                 <keep-alive
                   v-if="isKeepAlive"
@@ -175,6 +177,8 @@ const transitionMain = defineComponent({
                     class="main-content"
                   />
                 </keep-alive>
+
+                <!---->
                 <component
                   :is="Comp"
                   v-else
@@ -207,6 +211,7 @@ const transitionMain = defineComponent({
   display: flex;
   flex-direction: column;
   width: 100%;
+  height: calc(100vh - 48px);
 }
 
 .main-content {

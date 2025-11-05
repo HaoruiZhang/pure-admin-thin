@@ -1,4 +1,4 @@
-import { http } from "@/utils/http";
+import { adkHttp } from "@/utils/http";
 
 export type UserResult = {
   success: boolean;
@@ -33,8 +33,31 @@ export type RefreshTokenResult = {
     expires: Date;
   };
 };
+type Result = {
+  success: boolean;
+  data: Array<any>;
+};
 
 /** 登录 */
 export const getLogin = (data?: object) => {
-  return http.request<UserResult>("post", "/login", { data });
+  return adkHttp.request<UserResult>("post", "/login", { data });
+};
+
+/** 刷新`token` */
+export const refreshTokenApi = (data?: object) => {
+  return adkHttp.request<RefreshTokenResult>("post", "/refresh-token", {
+    data
+  });
+};
+
+export const getAsyncRoutes = () => {
+  return adkHttp.request<Result>("get", "/get-async-routes");
+};
+export const adkService = {
+  // refreshToken: (data?: object) => {
+  //   return adkHttp.post("user/token-fresh", { data });
+  // },
+  getSessionList: () => {
+    return adkHttp.get("apps/agents/users/zhanghaorui/sessions");
+  }
 };

@@ -1,12 +1,40 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
+import { storeToRefs } from "pinia";
+
 import NewSession from "@/assets/svg/new_session.svg";
+import { getSessionListByDays } from "../utils";
+
+import { useADKChatStore } from "@/store";
+import { adkService } from "@/api/adk.service";
+const adkStore = useADKChatStore();
+const { session_list, sendLoading, currentSession } = storeToRefs(adkStore);
 
 defineOptions({
   name: "ADK-SessionTabs"
 });
-
+const emit = defineEmits(["getDetail"]);
 const activeNames = ref<string[]>(["1"]);
+
+const handleClickSession = async (item: any) => {
+  console.log("▶️ _handleClickSession", item);
+  // 选择新对话或者选中当前会话
+  if (item.id === currentSession.value.id) {
+    return;
+  }
+  currentSession.value = item;
+  // const res = await adkService.refreshToken({
+  //   token:
+  //     localStorage.getItem("stag:token") ||
+  //     "AT-1606-Ae3T1t1L4AgfnPVdbJVKUEM0Mz1BpYxsNtT"
+  // });
+  const res = await adkService.getSessionList();
+  console.log("▶️ refreshToken res", res);
+};
+
+onMounted(() => {
+  console.log("session_list", session_list.value, sendLoading);
+});
 </script>
 
 <template>
@@ -25,50 +53,87 @@ const activeNames = ref<string[]>(["1"]);
         <template #title="{ isActive }">
           <div :class="['title-wrapper', { 'is-active': isActive }]">对话</div>
         </template>
-        <div class="date-splitter">今天</div>
+        <div
+          v-if="
+            getSessionListByDays(currentSession, session_list, 0, 1).length > 0
+          "
+          class="date-splitter"
+        >
+          今天
+        </div>
 
-        <div class="session-tab-item">
-          <div class="session-header dark:text-white!">
-            <span>新对话</span>
+        <template
+          v-for="session in getSessionListByDays(
+            currentSession,
+            session_list,
+            0,
+            1
+          )"
+          :key="session.id"
+        >
+          <div
+            :class="[
+              'session-tab-item',
+              {
+                'is-active-session': session.id === currentSession.id
+              }
+            ]"
+            @click="handleClickSession(session)"
+          >
+            <div class="session-header dark:text-white!">
+              <span>{{ session.state.title || "新对话" }}</span>
+            </div>
           </div>
-        </div>
-        <div class="session-tab-item">
-          <div class="session-header dark:text-white!">
-            <span>我想做SAW聚类分析</span>
-          </div>
-        </div>
+        </template>
+
         <div class="date-splitter">7天内</div>
-        <div class="session-tab-item">
-          <div class="session-header dark:text-white!">
-            <span>XXXXXXXXXXXX</span>
+        <template
+          v-for="session in getSessionListByDays(
+            currentSession,
+            session_list,
+            1,
+            7
+          )"
+          :key="session.id"
+        >
+          <div
+            :class="[
+              'session-tab-item',
+              {
+                'is-active-session': session.id === currentSession.id
+              }
+            ]"
+            @click="handleClickSession(session)"
+          >
+            <div class="session-header dark:text-white!">
+              <span>{{ session.state.title || "新对话" }}</span>
+            </div>
           </div>
-        </div>
-        <div class="session-tab-item">
-          <div class="session-header dark:text-white!">
-            <span>XXXXXXXXXXXXXXXXXXXXX</span>
-          </div>
-        </div>
+        </template>
         <div class="date-splitter">30天内</div>
-        <div class="session-tab-item">
-          <div class="session-header dark:text-white!">
-            <span>XXXXXXXXXXXXX</span>
+        <template
+          v-for="session in getSessionListByDays(
+            currentSession,
+            session_list,
+            7,
+            Infinity
+          )"
+          :key="session.id"
+        >
+          <div
+            :class="[
+              'session-tab-item',
+              {
+                'is-active-session': session.id === currentSession.id
+              }
+            ]"
+            @click="handleClickSession(session)"
+          >
+            <div class="session-header dark:text-white!">
+              <span>{{ session.state.title || "新对话" }}</span>
+            </div>
           </div>
-        </div>
-        <div class="session-tab-item">
-          <div class="session-header dark:text-white!">
-            <span>XXXXXXXXXXXXXXXXXXXXX</span>
-          </div>
-        </div>
-        <div class="session-tab-item">
-          <div class="session-header dark:text-white!">
-            <span>XXXXXXXXXXX</span>
-          </div>
-        </div>
-        <div class="session-tab-item">
-          <div class="session-header dark:text-white!">
-            <span>XXXXXXXXXXXXXXXXXXXXX</span>
-          </div>
-        </div>
+        </template>
       </el-collapse-item>
     </el-collapse>
   </div>
@@ -105,6 +170,7 @@ const activeNames = ref<string[]>(["1"]);
     /* overflow-y: auto; */
     height: calc(100% - 60px);
     margin-top: 16px;
+    border: green;
 
     .title-wrapper {
       font-size: 14px;
@@ -148,7 +214,35 @@ const activeNames = ref<string[]>(["1"]);
       &:active {
         background-color: rgb(0 0 0 / 8%);
       }
+
+      &.is-active-session {
+        background-color: rgb(95 0 133 / 8%);
+        border-radius: 4px;
+
+        span {
+          /* font-weight: 600; */
+          color: #5f0085;
+        }
+      }
     }
   }
+}
+</style>
+<style>
+.el-tab-pane {
+  height: 100%;
+}
+
+.session-container {
+  height: calc(100% - 280px);
+}
+
+.el-collapse-item {
+  height: 100%;
+}
+
+.el-collapse-item__wrap {
+  height: calc(100% - 48px);
+  overflow-y: auto;
 }
 </style>
