@@ -1,11 +1,11 @@
 export function getSessionListByDays(
   currentSession: any,
-  session_list: any[],
+  sessionList: any[],
   daysRangeStart: number,
   daysRangeEnd: number
 ) {
   const nowTimestamp = Date.now();
-  return session_list.filter(session => {
+  return sessionList.filter(session => {
     const sessionTimestamp = session.lastUpdateTime * 1000;
     const diffInDays =
       (nowTimestamp - sessionTimestamp) / (1000 * 60 * 60 * 24);

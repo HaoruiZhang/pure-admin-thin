@@ -59,5 +59,8 @@ export const adkService = {
   // },
   getSessionList: () => {
     return adkHttp.get("apps/agents/users/zhanghaorui/sessions");
+  },
+  getSessionDetail: (sessionId: number | string) => {
+    return adkHttp.get(`apps/agents/users/zhanghaorui/sessions/${sessionId}`);
   }
 };

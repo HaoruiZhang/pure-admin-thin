@@ -159,7 +159,7 @@ class PureHttp {
       ...param,
       ...axiosConfig
     } as PureHttpRequestConfig;
-    console.log("▶️ PureHttp post params:", config);
+    console.log("▶️ PureHttp request: ", config);
     // 单独处理自定义请求/响应回调
     return new Promise((resolve, reject) => {
       this.axiosInstance
@@ -179,7 +179,7 @@ class PureHttp {
     params?: AxiosRequestConfig<P>,
     config?: PureHttpRequestConfig
   ): Promise<T> {
-    console.log("▶️ PureHttp post params:", params);
+    console.log("▶️ HTTP Post params:", params);
     return this.request<T>("post", url, params, config);
   }
 

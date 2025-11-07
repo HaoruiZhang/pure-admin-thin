@@ -7,7 +7,7 @@ import MainArea from "./components/MainArea.vue";
 import { useADKChatStore } from "@/store";
 import { adkService } from "@/api/adk.service";
 const adkStore = useADKChatStore();
-const { session_list, sendLoading, currentSession } = storeToRefs(adkStore);
+const { sessionList, sendLoading, currentSession } = storeToRefs(adkStore);
 
 const emit = defineEmits(["getDetail"]);
 defineOptions({
@@ -15,7 +15,7 @@ defineOptions({
 });
 
 onMounted(() => {
-  console.log("▶️ ADK index mounted");
+  console.log("⬇️⬇️⬇️⬇️⬇️⬇️ 挂载了ADK组件 ⬇️⬇️⬇️⬇️⬇️⬇️");
   adkStore.getSessionList();
 });
 </script>

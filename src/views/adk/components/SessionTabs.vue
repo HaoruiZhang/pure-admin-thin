@@ -6,9 +6,8 @@ import NewSession from "@/assets/svg/new_session.svg";
 import { getSessionListByDays } from "../utils";
 
 import { useADKChatStore } from "@/store";
-import { adkService } from "@/api/adk.service";
 const adkStore = useADKChatStore();
-const { session_list, sendLoading, currentSession } = storeToRefs(adkStore);
+const { sessionList, sendLoading, currentSession } = storeToRefs(adkStore);
 
 defineOptions({
   name: "ADK-SessionTabs"
@@ -17,23 +16,16 @@ const emit = defineEmits(["getDetail"]);
 const activeNames = ref<string[]>(["1"]);
 
 const handleClickSession = async (item: any) => {
-  console.log("▶️ _handleClickSession", item);
   // 选择新对话或者选中当前会话
   if (item.id === currentSession.value.id) {
     return;
   }
-  currentSession.value = item;
-  // const res = await adkService.refreshToken({
-  //   token:
-  //     localStorage.getItem("stag:token") ||
-  //     "AT-1606-Ae3T1t1L4AgfnPVdbJVKUEM0Mz1BpYxsNtT"
-  // });
-  const res = await adkService.getSessionList();
-  console.log("▶️ refreshToken res", res);
+  console.log("▶️ 点击了Session列表的session: ", item);
+  await adkStore.setCurrentSession(item.id);
 };
 
 onMounted(() => {
-  console.log("session_list", session_list.value, sendLoading);
+  console.log("sessionList", sessionList.value, sendLoading);
 });
 </script>
 
@@ -55,7 +47,7 @@ onMounted(() => {
         </template>
         <div
           v-if="
-            getSessionListByDays(currentSession, session_list, 0, 1).length > 0
+            getSessionListByDays(currentSession, sessionList, 0, 1).length > 0
           "
           class="date-splitter"
         >
@@ -65,7 +57,7 @@ onMounted(() => {
         <template
           v-for="session in getSessionListByDays(
             currentSession,
-            session_list,
+            sessionList,
             0,
             1
           )"
@@ -90,7 +82,7 @@ onMounted(() => {
         <template
           v-for="session in getSessionListByDays(
             currentSession,
-            session_list,
+            sessionList,
             1,
             7
           )"
@@ -114,7 +106,7 @@ onMounted(() => {
         <template
           v-for="session in getSessionListByDays(
             currentSession,
-            session_list,
+            sessionList,
             7,
             Infinity
           )"
