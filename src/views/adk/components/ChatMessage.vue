@@ -1,43 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref, nextTick, onUnmounted } from "vue";
-import { sessionRes } from "./sessionRes";
+import { storeToRefs } from "pinia";
+import { sessionRes } from "./sessionRes2";
 import { md, mdNoBtn } from "../utils/markdown";
 import { onCopyDom } from "../utils";
-
-interface ObjectAny {
-  [key: string]: any;
-}
-// interface FunctionCallItem {
-//   functionCall: {
-//     id: string;
-//     name: string;
-//     args: ObjectAny;
-//   };
-// }
-// interface FunctionResponseItem {
-//   functionResponse: {
-//     id: string;
-//     name: string;
-//     response: ObjectAny;
-//   };
-// }
-interface EventItem {
-  content: {
-    parts: any[];
-    role: string;
-  };
-  partial?: boolean;
-  invocationId: string;
-  author: string;
-  actions?: {
-    stateDelta?: ObjectAny;
-    artifactDelta?: ObjectAny;
-    requestedAuthConfigs?: ObjectAny;
-  };
-  longRunningToolIds: any[];
-  id: string;
-  timestamp: number;
-}
+import type { EventItem } from "@/types/adk";
+import { useADKChatStore } from "@/store";
+const adkStore = useADKChatStore();
+const { sessionList, messageList, currentSession } = storeToRefs(adkStore);
 defineOptions({
   name: "ADK-ChatMessage"
 });
@@ -47,7 +17,7 @@ const props = defineProps<{
 }>();
 // refs
 const messageRef = ref<any[]>([]);
-const messageList = ref<EventItem[]>([...sessionRes.events]);
+// const messageList = ref<EventItem[]>([...sessionRes.events]);
 
 const scrollRef = ref<any>(null);
 const innerRef = ref<HTMLElement | null>(null);
@@ -116,7 +86,7 @@ onUnmounted(() => {
       @mouseleave="autoScrollDownDisabled = false"
     >
       <div ref="innerRef" class="message-list-inner">
-        <template v-for="(item, index) in messageList" :key="index">
+        <template v-for="(item, index) in currentSession.events" :key="index">
           <div
             v-if="
               !(

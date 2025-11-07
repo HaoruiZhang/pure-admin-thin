@@ -35,3 +35,25 @@ export interface AdkSession {
   lastUpdateTime: number; // 示例: 1761899673
   state?: AdkState;
 }
+
+export interface ObjectAny {
+  [key: string]: any;
+}
+
+export interface EventItem {
+  content: {
+    parts: any[];
+    role: string;
+  };
+  partial?: boolean;
+  invocationId: string;
+  author: string;
+  actions?: {
+    stateDelta?: ObjectAny;
+    artifactDelta?: ObjectAny;
+    requestedAuthConfigs?: ObjectAny;
+  };
+  longRunningToolIds: any[];
+  id: string;
+  timestamp: number;
+}
