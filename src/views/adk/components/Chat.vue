@@ -27,7 +27,7 @@ defineOptions({
         </div>
       </el-splitter-panel>
       <el-splitter-panel
-        :size="128"
+        :size="124"
         :resizable="false"
         class="chat-input-textarea"
       >

@@ -86,47 +86,36 @@ onUnmounted(() => {
       @mouseleave="autoScrollDownDisabled = false"
     >
       <div ref="innerRef" class="message-list-inner">
-        <template v-for="(item, index) in currentSession.events" :key="index">
+        <template v-for="(item, index) in messageList" :key="index">
           <div
-            v-if="
-              !(
-                item.content.parts[0].text &&
-                item.content.parts[0].text.startsWith('<backend-reply-start>')
-              )
-            "
+            v-if="!(item.text && item.text.startsWith('<backend-reply-start>'))"
             :ref="
-              el =>
-                el ? (messageRef[item.id] = el) : delete messageRef[item.id]
+              el => (el ? (messageRef[index] = el) : delete messageRef[index])
             "
-            :class="['message-box', { 'from-user': item.author === 'user' }]"
+            :class="['message-box', { 'from-user': item.role === 'user' }]"
           >
             <div class="mat-col AI-mat">
-              <el-button v-if="item.author !== 'user'">StAgent </el-button>
+              <el-button v-if="item.role !== 'user'">StAgent </el-button>
             </div>
             <div
               :class="[
                 'content-box',
                 'dark:text-white!',
                 {
-                  function:
-                    item.content.parts[0].functionCall ||
-                    item.content.parts[0].functionResponse
+                  function: item.functionCall || item.functionResponse
                 }
               ]"
             >
-              <div v-if="item.content.parts[0].functionCall">
-                {{ item.content.parts[0].functionCall?.name }}
+              <div v-if="item.functionCall">
+                {{ item.functionCall?.name }}
               </div>
-              <div v-if="item.content.parts[0].functionResponse">
-                {{ item.content.parts[0].functionResponse?.name }}
+              <div v-if="item.functionResponse">
+                {{ item.functionResponse?.name }}
               </div>
               <!-- <span style="white-space: pre-wrap">{{
                 item.content.parts[0].text
               }}</span> -->
-              <div
-                v-if="item.content.parts[0].text"
-                v-html="md.render(item.content.parts[0].text)"
-              />
+              <div v-if="item.text" v-html="md.render(item.text)" />
             </div>
             <div class="mat-col user-mat">
               <el-button v-if="item.author === 'user'">User </el-button>

@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { storeToRefs } from "pinia";
 
 import NewSession from "@/assets/svg/new_session.svg";
 import { getSessionListByDays } from "../utils";
-
+import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store";
 const adkStore = useADKChatStore();
 const { sessionList, sendLoading, currentSession } = storeToRefs(adkStore);

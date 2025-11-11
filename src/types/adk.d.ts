@@ -34,6 +34,7 @@ export interface AdkSession {
   events: any[];
   lastUpdateTime: number; // 示例: 1761899673
   state?: AdkState;
+  userInput?: string;
 }
 
 export interface ObjectAny {

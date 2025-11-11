@@ -6,12 +6,14 @@ import {
   formatBase64Data,
   extractScriptContent,
   extractFormConfigs,
-  getQueryFromId
+  getQueryFromId,
+  useAgentService
 } from "@/views/adk/utils";
 import { adkService } from "@/api/adk.service";
 // import {URLUtil} from '../../../utils/url-util';
-
+const { runSse, isLoading } = useAgentService();
 interface adkChatState {
+  userInput: "";
   isUserNewMessage: boolean;
   currentSession: AdkSession;
   sessionList: AdkSession[];
@@ -35,6 +37,7 @@ interface adkChatState {
 
 export const useADKChatStore = defineStore("adkChatStore", {
   state: (): adkChatState => ({
+    userInput: "",
     sendLoading: false,
     isUserNewMessage: false,
     currentSession: getNewSession(),
@@ -55,6 +58,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
   getters: {},
   actions: {
     initStore() {},
+    resetInput() {
+      this.userInput = "";
+    },
     getSessionById(id: number | string) {
       return this.sessionList.find(session => session.id === id);
     },
@@ -76,6 +82,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         .then((sessionDetail: AdkSession) => {
           console.log("▶️ 获取会话详情: ", sessionDetail);
           if (sessionDetail) {
+            this.messageList = [];
             this.currentSession = sessionDetail;
             this.parseSessionDetail(sessionDetail);
             console.log("▶️ 当前messageList: ", this.messageList);
@@ -424,6 +431,22 @@ export const useADKChatStore = defineStore("adkChatStore", {
           },
           "*"
         );
+      }
+    },
+    async sendMessage() {
+      const req = {
+        appName: this.currentSession.appName,
+        userId: this.currentSession.userId,
+        sessionId: this.currentSession.id,
+        newMessage: { role: "user", parts: [{ text: this.userInput }] },
+        streaming: true,
+        stateDelta: null
+      };
+      for await (const chunk of runSse(req)) {
+        // chunk 是服务端单个 data: 行中的 JSON 字符串
+        const obj = JSON.parse(chunk);
+        console.log("obj: ", obj, isLoading);
+        // 处理 obj ...
       }
     }
   }
