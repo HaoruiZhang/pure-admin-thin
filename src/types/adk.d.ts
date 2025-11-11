@@ -58,3 +58,12 @@ export interface EventItem {
   id: string;
   timestamp: number;
 }
+export interface AgentRunRequest {
+  appName: string;
+  userId: string;
+  sessionId: string;
+  newMessage: any;
+  functionCallEventId?: string;
+  streaming?: boolean;
+  stateDelta?: any;
+}

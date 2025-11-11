@@ -1,18 +1,16 @@
 <script setup lang="ts">
-import { ref } from "vue";
 import SendMessage from "@/assets/svg/send_message.svg";
 import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store";
 const adkStore = useADKChatStore();
-const { sessionList, sendLoading, currentSession, userInput } =
-  storeToRefs(adkStore);
+const { userInput } = storeToRefs(adkStore);
 defineOptions({
   name: "ADK-ChatInput"
 });
 function sendMessage() {
   if (!userInput.value) return;
   console.log("发送提问: ", userInput.value);
-  adkStore.sendMessage();
+  adkStore.sendMessage2();
 }
 </script>
 
@@ -26,7 +24,7 @@ function sendMessage() {
       type="textarea"
       placeholder="Ask a question or make a request"
     />
-    <div style=" position: relative;width: 100%; height: 20px">
+    <div style="position: relative; width: 100%; height: 20px">
       <el-button
         style="
           position: absolute;
@@ -59,17 +57,7 @@ function sendMessage() {
   height: 100%;
   padding: 8px;
   border: solid 1px #5f0085;
-
-  /* padding: 16px; */
-
-  /* background-color: #f5f5f5; */
-
-  /* margin-top: 16px; */
   border-radius: 8px;
-
-  /* border: solid 1px green; */
-
-  /* margin-top: 4px; */
 
   .el-textarea__inner {
     padding-bottom: 50px;

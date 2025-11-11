@@ -1,34 +1,25 @@
 <script setup lang="ts">
 import { onMounted, ref, nextTick, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
-import { sessionRes } from "./sessionRes2";
-import { md, mdNoBtn } from "../utils/markdown";
+import { md } from "../utils/markdown";
 import { onCopyDom } from "../utils";
-import type { EventItem } from "@/types/adk";
 import { useADKChatStore } from "@/store";
 const adkStore = useADKChatStore();
-const { sessionList, messageList, currentSession } = storeToRefs(adkStore);
+const { messageList, sendLoading } = storeToRefs(adkStore);
 defineOptions({
   name: "ADK-ChatMessage"
 });
-// props
-const props = defineProps<{
-  sendLoading: boolean;
-}>();
+
 // refs
 const messageRef = ref<any[]>([]);
 // const messageList = ref<EventItem[]>([...sessionRes.events]);
 
 const scrollRef = ref<any>(null);
-const innerRef = ref<HTMLElement | null>(null);
-// 判断是否代码控制滚动
-const isProgrammaticScroll = ref(true);
-const autoScrollDownDisabled = ref(false);
-const scrollDown = () => {
-  if (autoScrollDownDisabled.value) return;
-  isProgrammaticScroll.value = true;
-  scrollRef.value?.setScrollTop(innerRef.value?.clientHeight);
-};
+const messageInnerRef = ref<HTMLElement | null>(null);
+
+const isProgrammaticScroll = ref(true); // 判断是否代码控制滚动
+const autoScrollDownDisabled = ref(false); // 为true时，禁止自动滚动
+
 const onScroll = ({ scrollTop }: { scrollTop: number }) => {
   if (isProgrammaticScroll.value) {
     // 延迟重置，避免事件同步问题
@@ -37,28 +28,14 @@ const onScroll = ({ scrollTop }: { scrollTop: number }) => {
       isProgrammaticScroll.value = false;
     }, 0);
   } else {
-    if (!props.sendLoading) return;
+    if (sendLoading.value) return;
     const wrapEl = scrollRef.value?.wrapRef;
-    if (!wrapEl || !innerRef.value) return;
+    if (!wrapEl || !messageInnerRef.value) return;
     const isAtBottom =
       wrapEl.scrollTop + wrapEl.clientHeight >= wrapEl.scrollHeight - 40; // 40px的容差
     autoScrollDownDisabled.value = !isAtBottom;
   }
 };
-async function scrollToBottom() {
-  await nextTick();
-  setTimeout(() => {
-    scrollRef.value.wrapRef.scrollTo({
-      top: scrollRef.value.wrapRef.scrollHeight,
-      behavior: "smooth"
-    });
-  }, 500);
-}
-// onMounted(() => {
-//   setTimeout(() => {
-//     scrollToBottom();
-//   }, 1000);
-// });
 
 onMounted(() => {
   // 抛出代码复制按钮点击事件到全局，方便html字符串添加点击事件
@@ -66,12 +43,11 @@ onMounted(() => {
     const dom = event.parentNode.parentNode.parentNode?.children[1];
     onCopyDom(dom);
   };
-  // innerRef.value?.addEventListener("click", handleLinkClick);
+
+  adkStore.registerScrollRef(scrollRef);
 });
 
 onUnmounted(() => {
-  // 清除事件监听器
-  // innerRef.value?.removeEventListener("click", handleLinkClick);
   (window as any).onCopyClick = null;
 });
 </script>
@@ -85,7 +61,7 @@ onUnmounted(() => {
       @mouseenter="autoScrollDownDisabled = true"
       @mouseleave="autoScrollDownDisabled = false"
     >
-      <div ref="innerRef" class="message-list-inner">
+      <div ref="messageInnerRef" class="message-list-inner">
         <template v-for="(item, index) in messageList" :key="index">
           <div
             v-if="!(item.text && item.text.startsWith('<backend-reply-start>'))"
@@ -115,7 +91,12 @@ onUnmounted(() => {
               <!-- <span style="white-space: pre-wrap">{{
                 item.content.parts[0].text
               }}</span> -->
-              <div v-if="item.text" v-html="md.render(item.text)" />
+              <div
+                v-if="item.text && !item.formConfig && !item.taskInfo"
+                v-html="md.render(item.text)"
+              />
+              <div v-if="item.formConfig">Check form config</div>
+              <div v-if="item.taskInfo">View task info</div>
             </div>
             <div class="mat-col user-mat">
               <el-button v-if="item.author === 'user'">User </el-button>
@@ -123,6 +104,7 @@ onUnmounted(() => {
           </div>
         </template>
         <div
+          v-if="sendLoading"
           :ref="
             el =>
               el ? (messageRef['loading'] = el) : delete messageRef['loading']

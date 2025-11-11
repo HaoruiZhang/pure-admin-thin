@@ -1,6 +1,6 @@
-import { ref } from "vue";
-import type { AdkSession } from "@/types";
+import type { AdkSession, AgentRunRequest } from "@/types";
 import { $t } from "@/plugins/i18n";
+import { adkService } from "@/api/adk.service";
 
 export function getSessionListByDays(
   currentSession: any,
@@ -237,121 +237,152 @@ export function getQueryFromId(
  *     // 处理 obj ...
  *   }
  */
-export interface AgentRunRequest {
-  appName: string;
-  userId: string;
-  sessionId: string;
-  newMessage: any;
-  functionCallEventId?: string;
-  streaming?: boolean;
-  stateDelta?: any;
-}
 
-export function useAgentService() {
-  const isLoading = ref(false);
+// export function useAgentService() {
+//   const isLoading = ref(false);
 
-  /**
-   * runSse: 发起 POST /run_sse 并作为 AsyncGenerator 返回每条 "data:" 行（字符串形式）。
-   * 用法：
-   *   const { runSse, isLoading } = useAgentService();
-   *   for await (const chunk of runSse(req)) {
-   *     // chunk 是服务端单个 data: 行中的 JSON 字符串
-   *     const obj = JSON.parse(chunk);
-   *     // 处理 obj ...
-   *   }
-   */
-  async function* runSse(
-    req: AgentRunRequest
-  ): AsyncGenerator<string, void, void> {
-    const url = "http://172.19.196.165:8002/run_sse";
-    isLoading.value = true;
+//   /**
+//    * runSse: 发起 POST /run_sse 并作为 AsyncGenerator 返回每条 "data:" 行（字符串形式）。
+//    * 用法：
+//    *   const { runSse, isLoading } = useAgentService();
+//    *   for await (const chunk of runSse(req)) {
+//    *     // chunk 是服务端单个 data: 行中的 JSON 字符串
+//    *     const obj = JSON.parse(chunk);
+//    *     // 处理 obj ...
+//    *   }
+//    */
+//   async function* runSse(
+//     req: AgentRunRequest
+//   ): AsyncGenerator<string, void, void> {
+//     const url = "http://172.19.196.165:8002/run_sse";
+//     isLoading.value = true;
 
-    let response: Response | null = null;
+//     let response: Response | null = null;
+//     try {
+//       response = await fetch(url, {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//           Accept: "text/event-stream"
+//         },
+//         body: JSON.stringify(req)
+//       });
+
+//       if (!response.ok || !response.body) {
+//         throw new Error(
+//           `SSE request failed: ${response.status} ${response.statusText}`
+//         );
+//       }
+
+//       const reader = response.body.getReader();
+//       const decoder = new TextDecoder("utf-8");
+//       let lastData = "";
+
+//       while (true) {
+//         const { done, value } = await reader.read();
+//         console.log("✔️ done", done);
+//         if (done) break;
+
+//         lastData += decoder.decode(value, { stream: true });
+
+//         // 将完整的行拆分出来，最后一段可能是未完成的片段，保留到 lastData
+//         const lines = lastData.split(/\r?\n/);
+//         lastData = lines.pop() || "";
+
+//         for (const line of lines) {
+//           if (!line.trim()) continue;
+//           if (!line.startsWith("data:")) continue;
+//           const data = line.replace(/^data:\s*/, "");
+
+//           // 校验是否为合法 JSON；若解析失败，认为可能是被拆分，拼回 lastData 并等待下一次
+//           try {
+//             JSON.parse(data);
+//             yield data;
+//           } catch (e) {
+//             // 把当前行和剩余未完成内容合并，等待下个 chunk
+//             console.log("e", e);
+//             lastData = line + "\n" + lastData;
+//           }
+//         }
+//       }
+
+//       // 尝试处理剩余的 lastData（如果恰好以完整行结束）
+//       if (lastData) {
+//         const leftoverLines = lastData.split(/\r?\n/);
+//         for (const line of leftoverLines) {
+//           if (!line.trim()) continue;
+//           if (!line.startsWith("data:")) continue;
+//           const data = line.replace(/^data:\s*/, "");
+//           try {
+//             JSON.parse(data);
+//             yield data;
+//           } catch {
+//             // 忽略不完整或无法解析的残余
+//           }
+//         }
+//       }
+//     } catch (err) {
+//       // 将错误抛出到调用者
+//       throw err;
+//     } finally {
+//       isLoading.value = false;
+//       // 如果需要显式关闭 response.body reader，可在这里做清理
+//       try {
+//         if (response?.body) {
+//           // @ts-ignore
+//           const reader = response.body.getReader?.();
+//           if (reader) {
+//             await reader.cancel();
+//           }
+//         }
+//       } catch {
+//         // ignore
+//       }
+//     }
+//   }
+
+//   /**
+//    * startSse: 更方便的回调方式，自动消费 generator，返回 stop 控制
+//    * onData: 每次接收到 data 行（string）
+//    * onError/onComplete 可选
+//    */
+
+//   return {
+//     runSse,
+//     isLoading
+//   };
+// }
+
+export function startSse(
+  req: AgentRunRequest,
+  onData: (chunk: string) => void,
+  onError?: (err: any) => void,
+  onComplete?: () => void
+) {
+  const ctx = adkService.runSseGenerator(req);
+  let stopped = false;
+
+  (async () => {
     try {
-      response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "text/event-stream"
-        },
-        body: JSON.stringify(req)
-      });
-
-      if (!response.ok || !response.body) {
-        throw new Error(
-          `SSE request failed: ${response.status} ${response.statusText}`
-        );
+      for await (const chunk of ctx.generator) {
+        if (stopped) break;
+        onData(chunk);
       }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let lastData = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        console.log("✔️ done", done);
-        if (done) break;
-
-        lastData += decoder.decode(value, { stream: true });
-
-        // 将完整的行拆分出来，最后一段可能是未完成的片段，保留到 lastData
-        const lines = lastData.split(/\r?\n/);
-        lastData = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          if (!line.startsWith("data:")) continue;
-          const data = line.replace(/^data:\s*/, "");
-
-          // 校验是否为合法 JSON；若解析失败，认为可能是被拆分，拼回 lastData 并等待下一次
-          try {
-            JSON.parse(data);
-            yield data;
-          } catch (e) {
-            // 把当前行和剩余未完成内容合并，等待下个 chunk
-            console.log("e", e);
-            lastData = line + "\n" + lastData;
-          }
-        }
-      }
-
-      // 尝试处理剩余的 lastData（如果恰好以完整行结束）
-      if (lastData) {
-        const leftoverLines = lastData.split(/\r?\n/);
-        for (const line of leftoverLines) {
-          if (!line.trim()) continue;
-          if (!line.startsWith("data:")) continue;
-          const data = line.replace(/^data:\s*/, "");
-          try {
-            JSON.parse(data);
-            yield data;
-          } catch {
-            // 忽略不完整或无法解析的残余
-          }
-        }
-      }
-    } catch (err) {
-      // 将错误抛出到调用者
-      throw err;
-    } finally {
-      isLoading.value = false;
-      // 如果需要显式关闭 response.body reader，可在这里做清理
-      try {
-        if (response?.body) {
-          // @ts-ignore
-          const reader = response.body.getReader?.();
-          if (reader) {
-            await reader.cancel();
-          }
-        }
-      } catch {
-        // ignore
-      }
+      onComplete?.();
+    } catch (e) {
+      // AbortError 为正常 stop 情况，可根据需要忽略
+      onError?.(e);
     }
-  }
+  })();
 
   return {
-    runSse,
-    isLoading
+    stop: () => {
+      stopped = true;
+      ctx.stop();
+    },
+    isLoading: ctx.isLoading
   };
+}
+export function processThoughtText(text: string) {
+  return text.replace("/*PLANNING*/", "").replace("/*ACTION*/", "");
 }

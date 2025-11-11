@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, nextTick } from "vue";
 
 import NewSession from "@/assets/svg/new_session.svg";
 import { getSessionListByDays } from "../utils";
@@ -21,6 +21,8 @@ const handleClickSession = async (item: any) => {
   }
   console.log("▶️ 点击了Session列表的session: ", item);
   await adkStore.setCurrentSession(item.id);
+  await nextTick();
+  adkStore.scrollToBottomSmooth();
 };
 
 onMounted(() => {

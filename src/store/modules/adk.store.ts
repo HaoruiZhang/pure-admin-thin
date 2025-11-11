@@ -1,4 +1,6 @@
 import { defineStore } from "pinia";
+import type { Ref } from "vue";
+import { nextTick } from "vue";
 import type { AdkSession } from "@/types/adk";
 import {
   getNewSession,
@@ -7,17 +9,28 @@ import {
   extractScriptContent,
   extractFormConfigs,
   getQueryFromId,
-  useAgentService
+  startSse,
+  processThoughtText
 } from "@/views/adk/utils";
 import { adkService } from "@/api/adk.service";
 // import {URLUtil} from '../../../utils/url-util';
-const { runSse, isLoading } = useAgentService();
+interface SSEController {
+  stop: () => void;
+  isLoading: any;
+}
 interface adkChatState {
+  sseController: SSEController | null;
   userInput: "";
+  selectedFiles?: { file: File; url: string }[];
+  streamingTextMessage: any | null;
+  isModelThinkingSubject: boolean;
   isUserNewMessage: boolean;
   currentSession: AdkSession;
   sessionList: AdkSession[];
   sendLoading: boolean; //发送消息的loading状态
+  latestThought: string;
+  scrollContainer: any;
+  scrollRef: Ref<any>;
   messageList: any[];
   eventData: Map<string, any>;
   eventMessageIndexArray: any[];
@@ -37,8 +50,14 @@ interface adkChatState {
 
 export const useADKChatStore = defineStore("adkChatStore", {
   state: (): adkChatState => ({
+    sseController: null,
+    latestThought: "",
     userInput: "",
+    streamingTextMessage: null,
     sendLoading: false,
+    scrollContainer: null,
+    scrollRef: null,
+    isModelThinkingSubject: false,
     isUserNewMessage: false,
     currentSession: getNewSession(),
     sessionList: [],
@@ -58,6 +77,38 @@ export const useADKChatStore = defineStore("adkChatStore", {
   getters: {},
   actions: {
     initStore() {},
+    registerScrollRef(r: any) {
+      this.scrollRef = r;
+    },
+    unregisterScrollRef() {
+      this.scrollRef = null;
+    },
+    async scrollToBottom() {
+      await nextTick();
+      setTimeout(() => {
+        console.log(this.scrollRef);
+        this.scrollRef.wrapRef.scrollTo({
+          top: this.scrollRef.wrapRef.scrollHeight,
+          behavior: "smooth"
+        });
+      }, 500);
+    },
+
+    async scrollToBottomSmooth() {
+      await nextTick();
+      const el = this.scrollRef?.wrapRef ?? this.scrollRef;
+
+      if (!el) return;
+      try {
+        el.scrollTo({
+          top: el.scrollHeight,
+          behavior: "smooth"
+        });
+      } catch {
+        // 兜底：直接设置 scrollTop
+        el.scrollTop = el.scrollHeight;
+      }
+    },
     resetInput() {
       this.userInput = "";
     },
@@ -180,16 +231,17 @@ export const useADKChatStore = defineStore("adkChatStore", {
       const lastMessage = this.messageList[this.messageList.length - 1];
       const messagesToInsert = Array.isArray(message) ? message : [message];
       if (lastMessage?.isLoading) {
-        // console.log('     ---- 在loading消息前插入消息: ', messagesToInsert);
+        console.log("     ---- 在loading消息前插入消息: ", messagesToInsert);
         this.messageList.splice(
           this.messageList.length - 1,
           0,
           ...messagesToInsert
         );
       } else {
-        // console.log('     ---- 直接在末尾插入消息: ', messagesToInsert);
+        console.log("     ---- 直接在末尾插入消息: ", messagesToInsert);
         this.messageList.push(...messagesToInsert);
       }
+      this.scrollToBottomSmooth();
     },
     storeMessage(
       part: any,
@@ -433,21 +485,164 @@ export const useADKChatStore = defineStore("adkChatStore", {
         );
       }
     },
-    async sendMessage() {
-      const req = {
-        appName: this.currentSession.appName,
-        userId: this.currentSession.userId,
-        sessionId: this.currentSession.id,
-        newMessage: { role: "user", parts: [{ text: this.userInput }] },
-        streaming: true,
-        stateDelta: null
-      };
-      for await (const chunk of runSse(req)) {
-        // chunk 是服务端单个 data: 行中的 JSON 字符串
-        const obj = JSON.parse(chunk);
-        console.log("obj: ", obj, isLoading);
-        // 处理 obj ...
+
+    async sendMessage2() {
+      this.sendLoading = true;
+
+      // if (this.messageList.length === 0) {
+      //   this.scrollContainer.nativeElement.addEventListener("wheel", () => {
+      //     this.scrollInterruptedSubject.next(true);
+      //   });
+      //   this.scrollContainer.nativeElement.addEventListener("touchmove", () => {
+      //     this.scrollInterruptedSubject.next(true);
+      //   });
+      // }
+      // this.scrollInterruptedSubject.next(false);
+
+      // event.preventDefault();
+      if (!this.userInput.trim() && this.selectedFiles?.length <= 0) return;
+
+      if (this.updateSessionInterval) {
+        clearInterval(this.updateSessionInterval);
+        this.updateSessionInterval = null;
       }
+
+      // Add user message
+      if (!!this.userInput.trim()) {
+        this.messageList.push({ role: "user", text: this.userInput });
+        this.isUserNewMessage = true;
+      }
+
+      // Add user message attachments
+      if (this.selectedFiles?.length > 0) {
+        const messageAttachments = this.selectedFiles.map(file => ({
+          file: file.file,
+          url: file.url
+        }));
+        this.messageList.push({
+          role: "user",
+          attachments: messageAttachments
+        });
+      }
+      this.scrollToBottomSmooth();
+
+      let index = this.eventMessageIndexArray.length - 1;
+
+      this.sseController = startSse(
+        {
+          appName: this.currentSession.appName,
+          userId: this.currentSession.userId,
+          sessionId: this.currentSession.id,
+          newMessage: { role: "user", parts: [{ text: this.userInput }] },
+          streaming: true,
+          stateDelta: null
+        },
+        chunk => {
+          if (chunk.startsWith('{"error"')) {
+            console.log("error", chunk);
+            return;
+          }
+          const chunkJson = JSON.parse(chunk);
+          if (chunkJson.error) {
+            console.log("error", chunkJson.error);
+            return;
+          }
+          if (chunkJson.content) {
+            for (const part of chunkJson.content.parts) {
+              index += 1;
+              this.processPart(chunkJson, part, index, chunkJson.author);
+            }
+          } else if (chunkJson.errorMessage) {
+            console.log("error, chunkJson, index: ", chunkJson, index);
+          }
+          // 处理
+        },
+        err => console.error(err),
+        () => {
+          this.sendLoading = false;
+          console.log("complete");
+        }
+      );
+    },
+    processPart(
+      chunkJson: any,
+      part: any,
+      index: number,
+      author: string = "bot"
+    ) {
+      const renderedContent =
+        chunkJson.groundingMetadata?.searchEntryPoint?.renderedContent;
+
+      if (part.text) {
+        this.isModelThinkingSubject = false;
+        const newChunk = part.text;
+        if (part.thought) {
+          if (newChunk !== this.latestThought) {
+            const thoughtMessage = {
+              role: "bot",
+              text: processThoughtText(newChunk),
+              thought: true,
+              eventId: chunkJson.id
+            };
+
+            this.insertMessageBeforeLoadingMessage(thoughtMessage);
+          }
+          this.latestThought = newChunk;
+        } else if (!this.streamingTextMessage) {
+          this.streamingTextMessage = {
+            role: "bot",
+            text: processThoughtText(newChunk),
+            thought: part.thought ? true : false,
+            eventId: chunkJson.id
+          };
+
+          if (renderedContent) {
+            this.streamingTextMessage.renderedContent =
+              chunkJson.groundingMetadata.searchEntryPoint.renderedContent;
+          }
+
+          this.insertMessageBeforeLoadingMessage(this.streamingTextMessage);
+        } else {
+          if (renderedContent) {
+            this.streamingTextMessage.renderedContent =
+              chunkJson.groundingMetadata.searchEntryPoint.renderedContent;
+          }
+          if (newChunk == this.streamingTextMessage.text) {
+            this.eventMessageIndexArray[index] = newChunk;
+            this.streamingTextMessage = null;
+            localStorage.setItem("finalEventId", chunkJson.id);
+            this.scrollToBottomSmooth();
+            return;
+          }
+          this.streamingTextMessage.text += newChunk;
+          this.scrollToBottomSmooth();
+          if (author === "workflow_agent") {
+            window.parent.postMessage(
+              {
+                key: "workflowContent",
+                type: "workflowContent",
+                text: this.streamingTextMessage.text
+              },
+              "*"
+            );
+          }
+        }
+      } else if (!part.thought) {
+        this.isModelThinkingSubject = false;
+        this.storeMessage(
+          part,
+          chunkJson,
+          index,
+          chunkJson.author === "user" ? "user" : "bot"
+        );
+      } else {
+        this.isModelThinkingSubject = true;
+      }
+    },
+
+    stopSSE() {
+      // 主动停止
+      this.sseController.stop();
     }
   }
 });

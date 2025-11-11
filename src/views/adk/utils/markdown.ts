@@ -63,11 +63,11 @@ export const md: MarkdownIt = new MarkdownIt({
   // 设置代码高亮的配置
   highlight: function (code, language) {
     // 如果识别不到语言,将默认语言置为json
-    console.log(
-      "highlight code language:",
-      language,
-      hljs.getLanguage(language)
-    );
+    // console.log(
+    //   "highlight code language:",
+    //   language,
+    //   hljs.getLanguage(language)
+    // );
     let defaultLanguage = language;
     if (!(language && hljs.getLanguage(language))) {
       defaultLanguage = "json";
