@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import Chat from "./Chat.vue";
+import { storeToRefs } from "pinia";
+import { useADKChatStore } from "@/store";
+const adkStore = useADKChatStore();
+const { currentSession } = storeToRefs(adkStore);
 defineOptions({
   name: "ADK-Main"
 });
@@ -9,11 +13,7 @@ defineOptions({
   <div class="main-panel">
     <div class="top-bar">
       <!-- <div>Session ID</div> -->
-      <div>93ce0559-8a4c-46c8-bfd0-ee4670d6ef6b</div>
-      <div>
-        <el-switch>dianwo</el-switch>
-        Token Streaming
-      </div>
+      <div>{{ currentSession.id }}</div>
       <!-- <el-divider /> -->
       <!-- <div>End Session</div> -->
       <!-- <div>End Session</div> -->

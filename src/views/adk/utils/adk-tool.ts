@@ -13,21 +13,15 @@ export function getSessionListByDays(
     const sessionTimestamp = session.lastUpdateTime * 1000;
     const diffInDays =
       (nowTimestamp - sessionTimestamp) / (1000 * 60 * 60 * 24);
-    // console.log("diffInDays", diffInDays, daysRangeStart, daysRangeEnd);
-    return (
-      diffInDays >= daysRangeStart &&
-      diffInDays < daysRangeEnd &&
-      (session.id === currentSession.id ||
-        Object.keys(session.state).length > 0)
-    );
+    return diffInDays >= daysRangeStart && diffInDays < daysRangeEnd;
   });
 }
 
 export const getNewSession = (): AdkSession => {
   return {
     id: "0",
-    appName: "agent",
-    userId: localStorage?.getItem("stag:user_id") || "0",
+    appName: "agents",
+    userId: localStorage?.getItem("stag:user_id") || "user",
     events: [],
     state: { title: $t("adkChat.pureNewChat") },
     lastUpdateTime: Date.now() / 1000

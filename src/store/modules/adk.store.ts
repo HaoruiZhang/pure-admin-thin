@@ -69,7 +69,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     eventMessageIndexArray: [],
     userSpecifiedPath: "",
     user_info: {
-      user_id: localStorage?.getItem("stag:user_id") || "0"
+      user_id: localStorage?.getItem("stag:user_id") || "zhanghaorui"
     },
     redirectUri: URLUtil.getBaseUrlWithoutPath(),
     functionCallEventId: ""
@@ -93,6 +93,45 @@ export const useADKChatStore = defineStore("adkChatStore", {
         });
       }, 500);
     },
+    async createNewSession() {
+      adkService.createSession(this.user_info.user_id).then((res: any) => {
+        this.currentSession = getNewSession();
+        this.currentSession.id = res.id;
+        this.getSessionList();
+
+        // this.updateSelectedSessionUrl();
+      });
+      // this.createSession();
+      this.eventData.clear();
+      this.eventMessageIndexArray = [];
+      this.messageList = [];
+      // this.artifacts = [];
+    },
+
+    // updateSelectedSessionUrl() {
+    //   const url = this.router
+    //     .createUrlTree([], {
+    //       queryParams: {
+    //         session:
+    //           this.sessionId || window.sessionStorage.getItem("sessionId")!
+    //       },
+    //       queryParamsHandling: "merge"
+    //     })
+    //     .toString();
+    //   this.location.replaceState(url);
+    //   window.parent.postMessage(
+    //     {
+    //       key: "updateSessionUrl",
+    //       type: "updateSessionUrl",
+    //       sessionId:
+    //         this.sessionId || window.sessionStorage.getItem("sessionId")!
+    //     },
+    //     "*"
+    //   );
+    //   setTimeout(() => {
+    //     this.scrollToBottom();
+    //   });
+    // },
 
     async scrollToBottomSmooth() {
       await nextTick();
@@ -118,6 +157,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
     async getSessionList() {
       adkService.getSessionList().then((res: any[]) => {
         console.log("▶️ 向ADK后端查询Session列表: ", res);
+        console.log("▶️ 当前currentSession: ", this.currentSession);
+
         if (res.length) {
           this.sessionList = res;
         }

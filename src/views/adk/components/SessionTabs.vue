@@ -6,7 +6,7 @@ import { getSessionListByDays } from "../utils";
 import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store";
 const adkStore = useADKChatStore();
-const { sessionList, sendLoading, currentSession } = storeToRefs(adkStore);
+const { sessionList, currentSession } = storeToRefs(adkStore);
 
 defineOptions({
   name: "ADK-SessionTabs"
@@ -24,15 +24,23 @@ const handleClickSession = async (item: any) => {
   await nextTick();
   adkStore.scrollToBottomSmooth();
 };
+const onNewSessionClick = () => {
+  adkStore.createNewSession();
+};
 
-onMounted(() => {
-  console.log("sessionList", sessionList.value, sendLoading);
+onMounted(async () => {
+  // TODO: 使用事件通知：加载完毕列表后，默认取第一个
+  setTimeout(() => {
+    if (sessionList.value.length) {
+      handleClickSession(sessionList.value[0]);
+    }
+  }, 500);
 });
 </script>
 
 <template>
   <div class="session-tabs-container">
-    <div class="new-session">
+    <div class="new-session" @click.stop.prevent="onNewSessionClick">
       <NewSession width="24px" height="24px" style="vertical-align: middle" />
       <span>新建对话</span>
     </div>

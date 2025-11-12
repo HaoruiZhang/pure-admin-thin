@@ -65,6 +65,13 @@ export const adkService = {
   getSessionDetail: (sessionId: number | string) => {
     return adkHttp.get(`apps/agents/users/zhanghaorui/sessions/${sessionId}`);
   },
+  createSession: (userId: string | number) => {
+    return adkHttp.request(
+      "post",
+      `/apps/agents/users/${userId}/sessions`,
+      null
+    );
+  },
   /**
    * runSseGenerator: 返回一个 AsyncGenerator，按服务端每条 "data:" 行 yield 字符串（JSON 字符串）
    * 调用者负责 JSON.parse 并处理业务逻辑。
