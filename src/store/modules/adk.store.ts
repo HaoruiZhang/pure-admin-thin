@@ -374,7 +374,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
                 {
                   key: "userFormConfig",
                   type: "userFormConfig",
-                  data: this.userFormConfig
+                  data: JSON.stringify(this.userFormConfig)
                 },
                 "*"
               );
@@ -525,13 +525,87 @@ export const useADKChatStore = defineStore("adkChatStore", {
           {
             key: "isFinalResponse",
             type: "isFinalResponse",
-            sessionId:
-              this.currentSession.id ||
-              window.sessionStorage.getItem("sessionId")!,
+            sessionId: this.currentSession.id,
             value: true
           },
           "*"
         );
+      }
+    },
+    handleFinalMessageIfFormConfig() {
+      console.log(
+        "🛠️【runSse完成, 手动处理最后一条消息, messages: 】",
+        this.messageList
+      ); // green
+
+      const lastMessage = this.messageList[this.messageList.length - 1];
+      if (!lastMessage?.text) return;
+      // console.log('---- lastMessage', lastMessage);
+      this.messageList.pop();
+      lastMessage.eventId = localStorage.getItem("finalEventId")!;
+      if (lastMessage.text.includes("<FORM_CONFIG>")) {
+        const [cleanedText, fields] = extractFormConfigs(lastMessage.text);
+        if (cleanedText && fields.length) {
+          lastMessage.text = cleanedText;
+          lastMessage.userFormConfig = fields;
+          this.userFormConfig = fields;
+          localStorage.setItem("formEventID", lastMessage.eventId);
+          localStorage.setItem(
+            "formMsgIndex",
+            this.messageList.length.toString()
+          );
+          this.isUserNewMessage &&
+            window.parent.postMessage(
+              {
+                key: "userFormConfig",
+                type: "userFormConfig",
+                data: JSON.stringify(this.userFormConfig)
+              },
+              "*"
+            );
+          this.insertMessageBeforeLoadingMessage([
+            lastMessage,
+            { ...lastMessage, formConfig: { name: "Analysis Form" } }
+          ]);
+        }
+      } else if (lastMessage.text.includes("# <must_execute>")) {
+        const scriptContent = extractScriptContent(lastMessage.text);
+        if (scriptContent) {
+          // console.log('---- 脚本内容: ', scriptContent);
+          this.isUserNewMessage &&
+            window.parent.postMessage(
+              // 新对话的才自动执行
+              {
+                key: "mustExecuteScript",
+                type: "mustExecuteScript",
+                script: "```" + scriptContent + "\n\n```",
+                eventId: localStorage.getItem("finalEventId")!
+              },
+              "*"
+            );
+          window.parent.postMessage(
+            {
+              key: "isFinalResponse",
+              type: "isFinalResponse",
+              sessionId: this.currentSession.id,
+              value: true
+            },
+            "*"
+          );
+          this.insertMessageBeforeLoadingMessage([
+            lastMessage,
+            {
+              ...lastMessage,
+              taskInfo: {
+                eventId: localStorage.getItem("finalEventId")!,
+                sessionId: this.currentSession.id,
+                state: "success"
+              }
+            }
+          ]);
+        }
+      } else {
+        this.insertMessageBeforeLoadingMessage([lastMessage]);
       }
     },
 
@@ -573,7 +647,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           attachments: messageAttachments
         });
       }
-      this.userInput = "";
+
       this.scrollToBottomSmooth();
 
       let index = this.eventMessageIndexArray.length - 1;
@@ -611,8 +685,10 @@ export const useADKChatStore = defineStore("adkChatStore", {
         () => {
           this.sendLoading = false;
           console.log("complete");
+          this.handleFinalMessageIfFormConfig();
         }
       );
+      this.userInput = "";
     },
     processPart(
       chunkJson: any,

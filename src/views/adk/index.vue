@@ -5,7 +5,6 @@ import { storeToRefs } from "pinia";
 import LeftSidePanel from "./components/LeftSidePanel.vue";
 import MainArea from "./components/MainArea.vue";
 import { useADKChatStore } from "@/store";
-import { adkService } from "@/api/adk.service";
 const adkStore = useADKChatStore();
 const { sessionList, sendLoading, currentSession } = storeToRefs(adkStore);
 
@@ -13,12 +12,18 @@ const emit = defineEmits(["getDetail"]);
 defineOptions({
   name: "ADK"
 });
-
+function init() {
+  // 增加监听message事件
+  window.addEventListener("message", event => {
+    console.log("📢 收到了message事件: 【", event.data.key, "】", event.data);
+  });
+}
 onMounted(async () => {
   console.log("⬇️⬇️⬇️⬇️⬇️⬇️ 挂载了ADK组件 ⬇️⬇️⬇️⬇️⬇️⬇️");
+  init();
   await adkStore.getSessionList();
   await adkStore.getListReady;
-  await adkStore.setCurrentSession(currentSession.value.id);
+  await adkStore.setCurrentSession(sessionList.value[0]?.id);
   await nextTick();
   adkStore.scrollToBottomSmooth();
 });

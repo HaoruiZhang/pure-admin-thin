@@ -99,7 +99,7 @@ onUnmounted(() => {
               <div v-if="item.taskInfo">View task info</div>
             </div>
             <div class="mat-col user-mat">
-              <el-button v-if="item.author === 'user'">User </el-button>
+              <el-button v-if="item.role === 'user'">User </el-button>
             </div>
           </div>
         </template>
@@ -120,7 +120,7 @@ onUnmounted(() => {
           <div class="mat-col user-mat" />
         </div>
 
-        <!-- <div :class="['message-box', { 'from-user': item.author === 'user' }]">
+        <!-- <div :class="['message-box', { 'from-user': item.role === 'user' }]">
           <template
             v-if="
               item.content.parts[0].text &&
@@ -128,7 +128,7 @@ onUnmounted(() => {
             "
           >
             <div class="mat-col AI-mat">
-              <el-button v-if="item.author !== 'user'">StAgent </el-button>
+              <el-button v-if="item.role !== 'user'">StAgent </el-button>
             </div>
             <div class="content-box">
               <div v-if="item.content.parts[0].functionCall">
@@ -149,7 +149,7 @@ onUnmounted(() => {
               >
             </div>
             <div class="mat-col user-mat">
-              <el-button v-if="item.author === 'user'">User </el-button>
+              <el-button v-if="item.role === 'user'">User </el-button>
             </div>
           </template>
         </div> -->
