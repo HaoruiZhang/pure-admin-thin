@@ -88,7 +88,7 @@ defineOptions({
   }
 
   .chat-input-textarea {
-    padding: 8px 12px 0;
+    padding: 8px 12px;
   }
 }
 </style>

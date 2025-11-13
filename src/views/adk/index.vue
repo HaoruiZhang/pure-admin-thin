@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElSplitter, ElSplitterPanel } from "element-plus";
-import { onMounted } from "vue";
+import { onMounted, nextTick } from "vue";
 import { storeToRefs } from "pinia";
 import LeftSidePanel from "./components/LeftSidePanel.vue";
 import MainArea from "./components/MainArea.vue";
@@ -14,9 +14,13 @@ defineOptions({
   name: "ADK"
 });
 
-onMounted(() => {
+onMounted(async () => {
   console.log("⬇️⬇️⬇️⬇️⬇️⬇️ 挂载了ADK组件 ⬇️⬇️⬇️⬇️⬇️⬇️");
-  adkStore.getSessionList();
+  await adkStore.getSessionList();
+  await adkStore.getListReady;
+  await adkStore.setCurrentSession(currentSession.value.id);
+  await nextTick();
+  adkStore.scrollToBottomSmooth();
 });
 </script>
 

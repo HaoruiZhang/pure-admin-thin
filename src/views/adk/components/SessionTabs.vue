@@ -54,87 +54,91 @@ onMounted(async () => {
         <template #title="{ isActive }">
           <div :class="['title-wrapper', { 'is-active': isActive }]">对话</div>
         </template>
-        <div
-          v-if="
-            getSessionListByDays(currentSession, sessionList, 0, 1).length > 0
-          "
-          class="date-splitter"
-        >
-          今天
-        </div>
 
-        <template
-          v-for="session in getSessionListByDays(
-            currentSession,
-            sessionList,
-            0,
-            1
-          )"
-          :key="session.id"
-        >
-          <div
-            :class="[
-              'session-tab-item',
-              {
-                'is-active-session': session.id === currentSession.id
-              }
-            ]"
-            @click="handleClickSession(session)"
+        <el-scrollbar
+          ref="sessionListRef"
+          :class="['session-scrollbar', { 'show-stop': true }]"
+          ><div
+            v-if="
+              getSessionListByDays(currentSession, sessionList, 0, 1).length > 0
+            "
+            class="date-splitter"
           >
-            <div class="session-header dark:text-white!">
-              <span>{{ session.state.title || "新对话" }}</span>
-            </div>
+            今天
           </div>
-        </template>
+          <template
+            v-for="session in getSessionListByDays(
+              currentSession,
+              sessionList,
+              0,
+              1
+            )"
+            :key="session.id"
+          >
+            <div
+              :class="[
+                'session-tab-item',
+                {
+                  'is-active-session': session.id === currentSession.id
+                }
+              ]"
+              @click="handleClickSession(session)"
+            >
+              <div class="session-header dark:text-white!">
+                <span>{{ session.state.title || "新对话" }}</span>
+              </div>
+            </div>
+          </template>
 
-        <div class="date-splitter">7天内</div>
-        <template
-          v-for="session in getSessionListByDays(
-            currentSession,
-            sessionList,
-            1,
-            7
-          )"
-          :key="session.id"
-        >
-          <div
-            :class="[
-              'session-tab-item',
-              {
-                'is-active-session': session.id === currentSession.id
-              }
-            ]"
-            @click="handleClickSession(session)"
+          <div class="date-splitter">7天内</div>
+          <template
+            v-for="session in getSessionListByDays(
+              currentSession,
+              sessionList,
+              1,
+              7
+            )"
+            :key="session.id"
           >
-            <div class="session-header dark:text-white!">
-              <span>{{ session.state.title || "新对话" }}</span>
+            <div
+              :class="[
+                'session-tab-item',
+                {
+                  'is-active-session': session.id === currentSession.id
+                }
+              ]"
+              @click="handleClickSession(session)"
+            >
+              <div class="session-header dark:text-white!">
+                <span>{{ session.state.title || "新对话" }}</span>
+              </div>
             </div>
-          </div>
-        </template>
-        <div class="date-splitter">30天内</div>
-        <template
-          v-for="session in getSessionListByDays(
-            currentSession,
-            sessionList,
-            7,
-            Infinity
-          )"
-          :key="session.id"
-        >
-          <div
-            :class="[
-              'session-tab-item',
-              {
-                'is-active-session': session.id === currentSession.id
-              }
-            ]"
-            @click="handleClickSession(session)"
+          </template>
+          <div class="date-splitter">30天内</div>
+          <template
+            v-for="session in getSessionListByDays(
+              currentSession,
+              sessionList,
+              7,
+              Infinity
+            )"
+            :key="session.id"
           >
-            <div class="session-header dark:text-white!">
-              <span>{{ session.state.title || "新对话" }}</span>
+            <div
+              :class="[
+                'session-tab-item',
+                {
+                  'is-active-session': session.id === currentSession.id
+                }
+              ]"
+              @click="handleClickSession(session)"
+            >
+              <div class="session-header dark:text-white!">
+                <span>{{ session.state.title || "新对话" }}</span>
+              </div>
             </div>
-          </div>
-        </template>
+          </template></el-scrollbar
+        >
       </el-collapse-item>
     </el-collapse>
   </div>
@@ -245,5 +249,15 @@ onMounted(async () => {
 .el-collapse-item__wrap {
   height: calc(100% - 48px);
   overflow-y: auto;
+  border: none;
+}
+
+.el-collapse-item__content {
+  height: 100%;
+  padding: 0;
+}
+
+.session-scrollbar {
+  height: 100%;
 }
 </style>

@@ -14,6 +14,7 @@ import {
 } from "@/views/adk/utils";
 import { adkService } from "@/api/adk.service";
 // import {URLUtil} from '../../../utils/url-util';
+import { AccessiblePromise } from "@/views/adk/utils";
 interface SSEController {
   stop: () => void;
   isLoading: any;
@@ -46,6 +47,7 @@ interface adkChatState {
   userFormConfig?: any;
   isFinalResponse: boolean;
   updateSessionInterval?: any;
+  getListReady?: AccessiblePromise<void>;
 }
 
 export const useADKChatStore = defineStore("adkChatStore", {
@@ -72,7 +74,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
       user_id: localStorage?.getItem("stag:user_id") || "zhanghaorui"
     },
     redirectUri: URLUtil.getBaseUrlWithoutPath(),
-    functionCallEventId: ""
+    functionCallEventId: "",
+    getListReady: new AccessiblePromise<void>()
   }),
   getters: {},
   actions: {
@@ -97,7 +100,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
       adkService.createSession(this.user_info.user_id).then((res: any) => {
         this.currentSession = getNewSession();
         this.currentSession.id = res.id;
-        this.getSessionList();
+        this.sessionList.unshift(this.currentSession);
+        // this.getSessionList();
 
         // this.updateSelectedSessionUrl();
       });
@@ -160,8 +164,12 @@ export const useADKChatStore = defineStore("adkChatStore", {
         console.log("▶️ 当前currentSession: ", this.currentSession);
 
         if (res.length) {
-          this.sessionList = res;
+          const sortedRes = res.sort((a, b) => {
+            return b?.lastUpdateTime - a?.lastUpdateTime;
+          });
+          this.sessionList = sortedRes;
         }
+        this.getListReady.resolve();
       });
     },
     async setCurrentSession(newSessionId: number | string) {
@@ -565,6 +573,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           attachments: messageAttachments
         });
       }
+      this.userInput = "";
       this.scrollToBottomSmooth();
 
       let index = this.eventMessageIndexArray.length - 1;

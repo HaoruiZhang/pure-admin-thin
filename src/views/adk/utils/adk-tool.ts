@@ -1,5 +1,4 @@
 import type { AdkSession, AgentRunRequest } from "@/types";
-import { $t } from "@/plugins/i18n";
 import { adkService } from "@/api/adk.service";
 
 export function getSessionListByDays(
@@ -23,7 +22,7 @@ export const getNewSession = (): AdkSession => {
     appName: "agents",
     userId: localStorage?.getItem("stag:user_id") || "user",
     events: [],
-    state: { title: $t("adkChat.pureNewChat") },
+    state: { title: "新对话" },
     lastUpdateTime: Date.now() / 1000
   };
 };

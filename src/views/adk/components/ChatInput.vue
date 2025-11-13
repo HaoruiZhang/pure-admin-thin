@@ -18,11 +18,13 @@ function sendMessage() {
   <div class="chat-input">
     <el-input
       v-model="userInput"
+      class="adk-user-input"
       style="width: 100%"
       resize="none"
       :rows="3"
       type="textarea"
       placeholder="Ask a question or make a request"
+      @keydown.enter.exact.prevent="sendMessage"
     />
     <div style="position: relative; width: 100%; height: 20px">
       <el-button
@@ -56,11 +58,22 @@ function sendMessage() {
   justify-content: space-between;
   height: 100%;
   padding: 8px;
-  border: solid 1px #5f0085;
+  border: solid 1px #eee;
   border-radius: 8px;
 
+  &:hover {
+    border: solid 1px #5f0085;
+  }
+}
+</style>
+<style>
+.adk-user-input {
+  border: none;
+
   .el-textarea__inner {
-    padding-bottom: 50px;
+    box-shadow: none;
+
+    /* padding-bottom: 50px; */
   }
 }
 </style>

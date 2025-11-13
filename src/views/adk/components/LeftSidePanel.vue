@@ -51,6 +51,7 @@ const handleClick = (tab: TabsPaneContext, event: Event) => {
 
   .agent-app-tabs {
     height: calc(100% - 32px);
+    border-bottom: none;
 
     :deep(.el-tabs__item) {
       width: 200px;
