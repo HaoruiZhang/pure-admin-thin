@@ -113,6 +113,10 @@ const whiteList = ["/login"];
 const { VITE_HIDE_HOME } = import.meta.env;
 
 router.beforeEach((to: ToRouteType, _from, next) => {
+  if (to.path?.startsWith("/adk")) {
+    next();
+    return;
+  }
   if (to.meta?.keepAlive) {
     handleAliveRoute(to, "add");
     // 页面整体刷新和点击标签页刷新

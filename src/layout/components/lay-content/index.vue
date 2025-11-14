@@ -7,6 +7,7 @@ import { useGlobal, isNumber } from "@pureadmin/utils";
 import BackTopIcon from "@/assets/svg/back_top.svg?component";
 import { h, computed, Transition, defineComponent } from "vue";
 import { usePermissionStoreHook } from "@/store/modules/permission";
+import { useSettingStoreHook } from "@/store/modules/settings";
 
 const props = defineProps({
   fixedHeader: Boolean
@@ -42,6 +43,10 @@ const layout = computed(() => {
   return $storage?.layout.layout === "vertical";
 });
 
+const hiddenSideBar = computed(() => {
+  return useSettingStoreHook().hiddenSideBar;
+});
+
 const getMainWidth = computed(() => {
   return isNumber(stretch.value)
     ? stretch.value + "px"
@@ -51,6 +56,9 @@ const getMainWidth = computed(() => {
 });
 
 const getSectionStyle = computed(() => {
+  if (hiddenSideBar.value) {
+    return ["padding-top: 0;", props.fixedHeader ? "" : "min-height: 100vh;"];
+  }
   return [
     hideTabs.value && layout ? "padding-top: 48px;" : "",
     !hideTabs.value && layout
