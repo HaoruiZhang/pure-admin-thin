@@ -71,14 +71,20 @@ onUnmounted(() => {
             :class="['message-box', { 'from-user': item.role === 'user' }]"
           >
             <div class="mat-col AI-mat">
-              <el-button v-if="item.role !== 'user'">StAgent </el-button>
+              <el-button v-if="false && item.role !== 'user'"
+                >StAgent
+              </el-button>
             </div>
             <div
               :class="[
                 'content-box',
                 'dark:text-white!',
                 {
-                  function: item.functionCall || item.functionResponse
+                  'flex-width':
+                    item.functionCall ||
+                    item.functionResponse ||
+                    item.formConfig ||
+                    item.taskInfo
                 }
               ]"
             >
@@ -99,7 +105,7 @@ onUnmounted(() => {
               <div v-if="item.taskInfo">View task info</div>
             </div>
             <div class="mat-col user-mat">
-              <el-button v-if="item.role === 'user'">User </el-button>
+              <el-button v-if="false && item.role === 'user'">User </el-button>
             </div>
           </div>
         </template>
@@ -116,6 +122,7 @@ onUnmounted(() => {
           </div>
           <div class="content-box">
             <span style="white-space: pre-wrap">loading</span>
+            <span id="dot" />
           </div>
           <div class="mat-col user-mat" />
         </div>
@@ -180,7 +187,9 @@ onUnmounted(() => {
 
         .content-box {
           width: unset;
-          max-width: calc(100% - 176px);
+
+          /* max-width: calc(100% - 176px); */
+          max-width: calc(100% - 196px);
         }
       }
 
@@ -197,7 +206,7 @@ onUnmounted(() => {
       }
 
       .content-box {
-        width: calc(100% - 176px);
+        max-width: calc(100% - 196px);
         padding: 12px 16px;
 
         /* flex: 1; */
@@ -214,9 +223,10 @@ onUnmounted(() => {
         border-radius: 8px;
         box-shadow: rgb(199 199 199 / 50%) 0 2px 8px 0;
 
-        &.function {
+        &.flex-width {
+          /* 暂时用不到 */
           width: unset;
-          max-width: calc(100% - 176px);
+          max-width: calc(100% - 196px);
         }
       }
 
@@ -257,14 +267,14 @@ onUnmounted(() => {
   50% {
     box-shadow:
       4px 0 0 #333,
-      14px 0 0 #333;
+      9px 0 0 #333;
   }
 
   75% {
     box-shadow:
       4px 0 0 #333,
-      14px 0 0 #333,
-      24px 0 0 #333;
+      9px 0 0 #333,
+      14px 0 0 #333;
   }
 }
 
@@ -290,8 +300,9 @@ onUnmounted(() => {
   display: inline-block;
   width: 2px;
   height: 2px;
+  margin-right: 10px;
   border-radius: 2px;
-  animation: dotting 2.4s infinite step-start;
+  animation: dotting 2s infinite step-start;
 }
 
 /* 闪烁光标 */

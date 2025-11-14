@@ -10,8 +10,10 @@ import {
   extractFormConfigs,
   getQueryFromId,
   startSse,
-  processThoughtText
+  processThoughtText,
+  createPollingController
 } from "@/views/adk/utils";
+import type { PollingController } from "@/views/adk/utils";
 import { adkService } from "@/api/adk.service";
 // import {URLUtil} from '../../../utils/url-util';
 import { AccessiblePromise } from "@/views/adk/utils";
@@ -48,6 +50,8 @@ interface adkChatState {
   isFinalResponse: boolean;
   updateSessionInterval?: any;
   getListReady?: AccessiblePromise<void>;
+  sessionPolling?: PollingController;
+  lastSessionSyncTime?: number;
 }
 
 export const useADKChatStore = defineStore("adkChatStore", {
@@ -75,7 +79,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
     },
     redirectUri: URLUtil.getBaseUrlWithoutPath(),
     functionCallEventId: "",
-    getListReady: new AccessiblePromise<void>()
+    getListReady: new AccessiblePromise<void>(),
+    sessionPolling: undefined,
+    lastSessionSyncTime: 0
   }),
   getters: {},
   actions: {
@@ -182,16 +188,62 @@ export const useADKChatStore = defineStore("adkChatStore", {
         .then((sessionDetail: AdkSession) => {
           console.log("▶️ 获取会话详情: ", sessionDetail);
           if (sessionDetail) {
-            this.messageList = [];
             this.currentSession = sessionDetail;
             this.parseSessionDetail(sessionDetail);
             console.log("▶️ 当前messageList: ", this.messageList);
           }
         });
     },
-    parseSessionDetail(session: any) {
-      let index = 0;
-      session.events.forEach((event: any) => {
+    startSessionPolling(interval = 5000) {
+      if (!this.currentSession?.id) return;
+      this.sessionPolling?.stop();
+      this.sessionPolling = createPollingController({
+        interval,
+        autoStart: true,
+        immediate: true,
+        task: async () => {
+          if (!this.currentSession?.id) return;
+          const sessionDetail = (await adkService.getSessionDetail(
+            this.currentSession.id
+          )) as AdkSession;
+          const hasUpdates =
+            sessionDetail?.lastUpdateTime !== this.lastSessionSyncTime ||
+            (sessionDetail?.events?.length ?? 0) !==
+              (this.currentSession?.events?.length ?? 0);
+          if (!hasUpdates) {
+            this.currentSession = sessionDetail;
+            this.lastSessionSyncTime = sessionDetail?.lastUpdateTime;
+            return;
+          }
+
+          const prevEventCount = this.currentSession?.events?.length ?? 0;
+          this.currentSession = sessionDetail;
+          this.parseSessionDetail(sessionDetail, prevEventCount, false);
+        },
+        onError: err => {
+          console.error("❌ Session polling error:", err);
+        }
+      });
+    },
+    stopSessionPolling() {
+      this.sessionPolling?.stop();
+      this.sessionPolling = undefined;
+    },
+    parseSessionDetail(session: any, startEventIndex = 0, reset = true) {
+      if (!session?.events) {
+        this.lastSessionSyncTime = session?.lastUpdateTime;
+        return;
+      }
+
+      let index = reset ? 0 : this.eventMessageIndexArray.length;
+
+      if (reset) {
+        this.eventData.clear();
+        this.eventMessageIndexArray = [];
+        this.messageList = [];
+      }
+
+      session.events.slice(startEventIndex).forEach((event: any) => {
         event.content?.parts?.forEach((part: any) => {
           this.storeMessage(
             part,
@@ -205,6 +257,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           // }
         });
       });
+      this.lastSessionSyncTime = session?.lastUpdateTime;
     },
     getAsyncFunctionsFromParts(pendingIds: any[], parts: any[]) {
       for (const part of parts) {

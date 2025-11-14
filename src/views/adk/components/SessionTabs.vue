@@ -159,7 +159,7 @@ onMounted(async () => {
     align-self: stretch;
     height: 44px;
     padding: 0 12px;
-    background: #f8f5ff;
+    background-color: #f8f5ff;
     border-radius: 8px;
 
     span {
@@ -168,6 +168,15 @@ onMounted(async () => {
       font-weight: 500;
       line-height: 14px; /* 100% */
       color: #5f0085;
+    }
+
+    &:hover {
+      cursor: pointer;
+      filter: brightness(96%);
+    }
+
+    &:active {
+      filter: brightness(92%);
     }
   }
 
@@ -221,12 +230,22 @@ onMounted(async () => {
       }
 
       &.is-active-session {
-        background-color: rgb(95 0 133 / 8%);
+        background: #f4f5f6;
+
+        /* background-color: rgb(95 0 133 / 8%); */
         border-radius: 4px;
 
         span {
+          /* font-family: "PingFang SC"; */
+          font-size: 14px;
+          font-style: normal;
+          font-weight: 400;
+          line-height: 22px; /* 157.143% */
+
           /* font-weight: 600; */
-          color: #5f0085;
+
+          /* color: #5f0085; */
+          color: #45537a;
         }
       }
     }
