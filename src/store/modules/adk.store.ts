@@ -86,6 +86,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
   getters: {},
   actions: {
     initStore() {},
+    setUserId(userId: string) {
+      this.user_info.user_id = userId;
+    },
     registerScrollRef(r: any) {
       this.scrollRef = r;
     },
