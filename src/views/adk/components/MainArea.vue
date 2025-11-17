@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Chat from "./Chat.vue";
 import { storeToRefs } from "pinia";
-import { useADKChatStore } from "@/store";
+import { useADKChatStore } from "@/store/modules/adk.store";
 const adkStore = useADKChatStore();
 const { currentSession } = storeToRefs(adkStore);
 defineOptions({

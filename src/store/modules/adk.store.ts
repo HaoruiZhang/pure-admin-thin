@@ -41,7 +41,7 @@ interface adkChatState {
   userSpecifiedPath?: string;
   functionCallEventId?: string;
   user_info?: {
-    user_id: string | number;
+    user_id: string;
     access_times?: number;
     access_privilege_bits?: number;
   };
@@ -75,7 +75,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     eventMessageIndexArray: [],
     userSpecifiedPath: "",
     user_info: {
-      user_id: localStorage?.getItem("stag:user_id") || "zhanghaorui"
+      user_id: localStorage?.getItem("stag:user_id") || "user"
     },
     redirectUri: URLUtil.getBaseUrlWithoutPath(),
     functionCallEventId: "",
@@ -88,6 +88,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     initStore() {},
     setUserId(userId: string) {
       this.user_info.user_id = userId;
+      localStorage?.setItem("stag:user_id", userId);
     },
     registerScrollRef(r: any) {
       this.scrollRef = r;
@@ -107,7 +108,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     },
     async createNewSession() {
       adkService.createSession(this.user_info.user_id).then((res: any) => {
-        this.currentSession = getNewSession();
+        this.currentSession = getNewSession(this.user_info.user_id);
         this.currentSession.id = res.id;
         this.sessionList.unshift(this.currentSession);
         // this.getSessionList();
@@ -168,7 +169,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       return this.sessionList.find(session => session.id === id);
     },
     async getSessionList() {
-      adkService.getSessionList().then((res: any[]) => {
+      adkService.getSessionList(this.user_info.user_id).then((res: any[]) => {
         console.log("▶️ 向ADK后端查询Session列表: ", res);
         console.log("▶️ 当前currentSession: ", this.currentSession);
 
@@ -187,7 +188,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       // }
       // const targetSession = await adkService.getSessionDetail(newSessionId);
       adkService
-        .getSessionDetail(newSessionId)
+        .getSessionDetail(this.user_info.user_id, newSessionId)
         .then((sessionDetail: AdkSession) => {
           console.log("▶️ 获取会话详情: ", sessionDetail);
           if (sessionDetail) {
@@ -207,6 +208,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         task: async () => {
           if (!this.currentSession?.id) return;
           const sessionDetail = (await adkService.getSessionDetail(
+            this.user_info.user_id,
             this.currentSession.id
           )) as AdkSession;
           const hasUpdates =
@@ -667,7 +669,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
 
     async sendMessage2() {
       this.sendLoading = true;
-
+      console.log("当前session: ", this.currentSession);
       // if (this.messageList.length === 0) {
       //   this.scrollContainer.nativeElement.addEventListener("wheel", () => {
       //     this.scrollInterruptedSubject.next(true);

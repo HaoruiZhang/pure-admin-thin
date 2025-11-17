@@ -4,7 +4,7 @@ import { onMounted, nextTick } from "vue";
 import { storeToRefs } from "pinia";
 import LeftSidePanel from "./components/LeftSidePanel.vue";
 import MainArea from "./components/MainArea.vue";
-import { useADKChatStore } from "@/store";
+import { useADKChatStore } from "@/store/modules/adk.store";
 const adkStore = useADKChatStore();
 const { sessionList, sendLoading, currentSession } = storeToRefs(adkStore);
 
@@ -49,8 +49,8 @@ async function ensureSessionList() {
 onMounted(async () => {
   console.log("⬇️⬇️⬇️⬇️⬇️⬇️ 挂载了ADK组件 ⬇️⬇️⬇️⬇️⬇️⬇️");
   init();
-  await ensureSessionList();
   await bootstrapSession();
+  await ensureSessionList();
   await nextTick();
   adkStore.scrollToBottomSmooth();
 });

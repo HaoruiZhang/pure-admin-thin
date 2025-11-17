@@ -3,7 +3,7 @@ import { onMounted, ref, nextTick, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
 import { md } from "../utils/markdown";
 import { onCopyDom } from "../utils";
-import { useADKChatStore } from "@/store";
+import { useADKChatStore } from "@/store/modules/adk.store";
 const adkStore = useADKChatStore();
 const { messageList, sendLoading } = storeToRefs(adkStore);
 defineOptions({

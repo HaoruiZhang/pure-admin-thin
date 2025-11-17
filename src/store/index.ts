@@ -7,4 +7,3 @@ export function setupStore(app: App<Element>) {
 }
 
 export { store };
-export * from "./modules/adk.store";

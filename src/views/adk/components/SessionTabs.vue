@@ -4,7 +4,7 @@ import { onMounted, ref, nextTick } from "vue";
 import NewSession from "@/assets/svg/new_session.svg";
 import { getSessionListByDays } from "../utils";
 import { storeToRefs } from "pinia";
-import { useADKChatStore } from "@/store";
+import { useADKChatStore } from "@/store/modules/adk.store";
 const adkStore = useADKChatStore();
 const { sessionList, currentSession } = storeToRefs(adkStore);
 

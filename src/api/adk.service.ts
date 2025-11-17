@@ -59,11 +59,11 @@ export const adkService = {
   // refreshToken: (data?: object) => {
   //   return adkHttp.post("user/token-fresh", { data });
   // },
-  getSessionList: () => {
-    return adkHttp.get("apps/agents/users/zhanghaorui/sessions");
+  getSessionList: (userId: string | number) => {
+    return adkHttp.get(`apps/agents/users/${userId}/sessions`);
   },
-  getSessionDetail: (sessionId: number | string) => {
-    return adkHttp.get(`apps/agents/users/zhanghaorui/sessions/${sessionId}`);
+  getSessionDetail: (userId: string | number, sessionId: number | string) => {
+    return adkHttp.get(`apps/agents/users/${userId}/sessions/${sessionId}`);
   },
   createSession: (userId: string | number) => {
     return adkHttp.request(

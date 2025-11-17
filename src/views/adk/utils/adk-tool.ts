@@ -16,11 +16,11 @@ export function getSessionListByDays(
   });
 }
 
-export const getNewSession = (): AdkSession => {
+export const getNewSession = (userId: string = "user"): AdkSession => {
   return {
     id: "0",
     appName: "agents",
-    userId: localStorage?.getItem("stag:user_id") || "user",
+    userId: userId,
     events: [],
     state: { title: "新对话" },
     lastUpdateTime: Date.now() / 1000

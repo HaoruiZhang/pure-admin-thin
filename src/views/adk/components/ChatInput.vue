@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import SendMessage from "@/assets/svg/send_message.svg";
 import { storeToRefs } from "pinia";
-import { useADKChatStore } from "@/store";
+import { useADKChatStore } from "@/store/modules/adk.store";
 const adkStore = useADKChatStore();
 const { userInput } = storeToRefs(adkStore);
 defineOptions({
