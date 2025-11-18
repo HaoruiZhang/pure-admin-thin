@@ -136,7 +136,7 @@ onUnmounted(() => {
       <div ref="messageInnerRef" class="message-list-inner">
         <template
           v-for="(item, index) in messageList"
-          :key="item.eventId ?? `${item.role}-${index}`"
+          :key="item.eventId + index"
         >
           <div
             v-if="!(item.text && item.text.startsWith('<backend-reply-start>'))"
