@@ -19,6 +19,7 @@ buttons:
   pureOpenText: Open
   pureCloseText: Close
   copy: Copy
+  run: Run
   copied: Copied Successfully
   copyError: Copy Failed
 search:

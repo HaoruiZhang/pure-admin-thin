@@ -50,6 +50,7 @@ interface adkChatState {
   isFinalResponse: boolean;
   updateSessionInterval?: any;
   getListReady?: AccessiblePromise<void>;
+  setCurrentSessionReady?: AccessiblePromise<void>;
   sessionPolling?: PollingController;
   lastSessionSyncTime?: number;
 }
@@ -80,6 +81,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     redirectUri: URLUtil.getBaseUrlWithoutPath(),
     functionCallEventId: "",
     getListReady: new AccessiblePromise<void>(),
+    setCurrentSessionReady: new AccessiblePromise<void>(),
     sessionPolling: undefined,
     lastSessionSyncTime: 0
   }),

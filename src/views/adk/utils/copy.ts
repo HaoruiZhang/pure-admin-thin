@@ -1,7 +1,9 @@
 // import i18n from "@/locales";
 // import { ElMessage } from "element-plus";
 // import { showSuccessToast } from "vant";
-
+import { storeToRefs } from "pinia";
+import { useADKChatStore } from "@/store/modules/adk.store";
+import { getParentEventId } from ".";
 export const onCopy = (text: string, tooltip?: string) => {
   const oInput = document.createElement("input");
   oInput.value = text;
@@ -32,4 +34,27 @@ export const onCopyDom = (node: any) => {
   // } else {
   //   ElMessage.success(i18n.global.t("copilot.copySuccess"));
   // }
+};
+
+export const onRunDom = (node: any) => {
+  const content =
+    typeof node === "string"
+      ? node
+      : (node?.innerText ?? node?.textContent ?? "");
+  if (!content) return;
+  const adkStore = useADKChatStore();
+  const { currentSession } = storeToRefs(adkStore);
+  const eventId = getParentEventId(node);
+  console.log("获取的代码内容\n", content, "\neventId\n", eventId);
+  window.parent.postMessage(
+    {
+      key: "workflowContent",
+      type: "workflowContent",
+      text: content,
+      session:
+        currentSession.value.id ?? window.sessionStorage.getItem("sessionId"),
+      eventId: eventId
+    },
+    "*"
+  );
 };

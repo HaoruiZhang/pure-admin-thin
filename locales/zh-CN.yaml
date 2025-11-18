@@ -19,6 +19,7 @@ buttons:
   pureOpenText: 开
   pureCloseText: 关
   copy: 复制
+  run: 运行
   copied: 复制成功
   copyError: 复制失败
 search:

@@ -80,8 +80,26 @@ export const md: MarkdownIt = new MarkdownIt({
         "</code>";
       codeDom.innerHTML = codeHtml;
       return (
-        `<div class="code-header"><div>${language || ""}</div><div class="action"><div class="code-copy" onClick="onCopyClick(this)"> ${t("buttons.copy")}</div></div></div>` +
-        codeDom.outerHTML
+        (["python", "r", "bash"].includes(language)
+          ? `<div class="code-header">
+          <div>${language || ""}</div>
+          <div class="code-action"> 
+            <div class="code-action-btn run-btn" onClick="onRunClick(this)">
+              <span>${t("buttons.run")}</span>
+            </div>
+            <div class="code-action-btn copy-btn" onClick="onCopyClick(this)">
+              <span>${t("buttons.copy")}</span>
+            </div>
+          </div>
+        </div>`
+          : `<div class="code-header">
+          <div>${language || ""}</div>
+          <div class="code-action"> 
+            <div class="code-action-btn copy-btn" onClick="onCopyClick(this)">
+              <span>${t("buttons.copy")}</span>
+            </div>
+          </div>
+        </div>`) + codeDom.outerHTML
       );
     } catch (e: any) {
       console.log(e);

@@ -2,7 +2,7 @@
 import { onMounted, ref, nextTick, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
 import { md } from "../utils/markdown";
-import { onCopyDom } from "../utils";
+import { onCopyDom, onRunDom } from "../utils";
 import { useADKChatStore } from "@/store/modules/adk.store";
 const adkStore = useADKChatStore();
 const { messageList, sendLoading } = storeToRefs(adkStore);
@@ -109,11 +109,15 @@ const onScroll = ({ scrollTop }: { scrollTop: number }) => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   // 抛出代码复制按钮点击事件到全局，方便html字符串添加点击事件
   (window as any).onCopyClick = (event: any) => {
     const dom = event.parentNode.parentNode.parentNode?.children[1];
     onCopyDom(dom);
+  };
+  (window as any).onRunClick = (event: any) => {
+    const dom = event.parentNode.parentNode.parentNode?.children[1];
+    onRunDom(dom);
   };
 
   adkStore.registerScrollRef(scrollRef);
@@ -121,6 +125,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   (window as any).onCopyClick = null;
+  (window as any).onRunClick = null;
 });
 </script>
 
@@ -136,7 +141,7 @@ onUnmounted(() => {
       <div ref="messageInnerRef" class="message-list-inner">
         <template
           v-for="(item, index) in messageList"
-          :key="item.eventId + index"
+          :key="(item.eventId ?? 'user_') + index"
         >
           <div
             v-if="!(item.text && item.text.startsWith('<backend-reply-start>'))"
@@ -144,6 +149,7 @@ onUnmounted(() => {
               el => (el ? (messageRef[index] = el) : delete messageRef[index])
             "
             :class="['message-box', { 'from-user': item.role === 'user' }]"
+            :data-event-id="item.eventId ?? ''"
           >
             <div class="mat-col AI-mat">
               <el-button v-if="false && item.role !== 'user'"
@@ -504,29 +510,36 @@ onUnmounted(() => {
   background: #ebedf0;
   border-radius: 4px 4px 0 0;
 
-  .code-copy {
+  .code-action {
     display: flex;
-    align-items: center;
-    font-size: 14px;
-    color: #939cab;
-    cursor: pointer;
-    user-select: none;
 
-    &:hover {
-      color: var(--el-color-primary);
+    .code-action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 24px;
+      font-size: 14px;
+      color: #939cab;
+      cursor: pointer;
+      user-select: none;
 
-      &::before {
+      &:hover {
+        color: var(--el-color-primary);
+
+        /* &::before {
         background: var(--el-color-primary);
+      } */
       }
-    }
 
-    &::before {
+      /* &::before {
       display: block;
       width: 16px;
       height: 16px;
       margin-right: 4px;
       content: "";
       background: #939cab;
+    } */
     }
   }
 }

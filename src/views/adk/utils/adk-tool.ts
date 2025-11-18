@@ -345,6 +345,10 @@ export function getQueryFromId(
 //     isLoading
 //   };
 // }
+export const getParentEventId = (child: HTMLElement) => {
+  const messageBox = child.closest<HTMLElement>("[data-event-id]");
+  return messageBox?.dataset.eventId ?? "";
+};
 
 export function startSse(
   req: AgentRunRequest,
