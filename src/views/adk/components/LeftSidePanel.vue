@@ -4,11 +4,17 @@ import type { TabsPaneContext } from "element-plus";
 import SessionTabs from "./SessionTabs.vue";
 // import SvgIcon from "./svg-icon.vue";
 import AIPen from "@/assets/svg/ai_pen.svg?component";
+import { storageLocal, isAllEmpty } from "@pureadmin/utils";
+import { responsiveStorageNameSpace } from "@/config";
 
 defineOptions({
   name: "ADK-LeftSidePanel"
 });
-
+const showLogo = ref(
+  storageLocal().getItem<StorageConfigs>(
+    `${responsiveStorageNameSpace()}configure`
+  )?.showLogo ?? true
+);
 const activeName = ref("sessions");
 
 const handleClick = (tab: TabsPaneContext, event: Event) => {
@@ -18,7 +24,10 @@ const handleClick = (tab: TabsPaneContext, event: Event) => {
 
 <template>
   <div class="left-side-panel">
-    <div style="display: flex; align-items: center; padding: 8px">
+    <div
+      v-if="showLogo"
+      style="display: flex; align-items: center; padding: 8px"
+    >
       <!-- <SvgIcon icon="ai-pen" width="32px" height="32px" /> -->
       <!-- <span style="display: inline-block; vertical-align: middle"> -->
       <AIPen width="24px" height="24px" style="vertical-align: middle" />
@@ -37,7 +46,7 @@ const handleClick = (tab: TabsPaneContext, event: Event) => {
     >
       <!-- <el-tab-pane label="Events" name="events">Events</el-tab-pane> -->
       <!-- <el-tab-pane label="Artifacts" name="artifacts">Artifacts</el-tab-pane> -->
-      <el-tab-pane label="资源库" name="resource">Artifa资源库cts</el-tab-pane>
+      <!-- <el-tab-pane label="资源库" name="resource">Artifa资源库cts</el-tab-pane> -->
       <el-tab-pane label="AI对话框" name="sessions">
         <SessionTabs />
       </el-tab-pane>
