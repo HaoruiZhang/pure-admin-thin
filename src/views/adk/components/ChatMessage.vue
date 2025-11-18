@@ -20,6 +20,78 @@ const messageInnerRef = ref<HTMLElement | null>(null);
 const isProgrammaticScroll = ref(true); // 判断是否代码控制滚动
 const autoScrollDownDisabled = ref(false); // 为true时，禁止自动滚动
 
+const COLLAPSE_THRESHOLD = 4000; // 字符阈值，超过则折叠
+const COLLAPSE_PREVIEW_LENGTH = 1200; // 预览长度
+
+const expandedMessageKeys = ref<Set<string>>(new Set());
+const markdownCache = new Map<string, { text: string; html: string }>();
+
+const getMessageKey = (item: any, index: number) => {
+  if (item?.eventId) return String(item.eventId);
+  if (item?.functionCall?.id) return `fn-call-${item.functionCall.id}`;
+  if (item?.functionResponse?.id)
+    return `fn-res-${item.functionResponse.id}-${index}`;
+  if (item?.taskInfo?.eventId) return `task-${item.taskInfo.eventId}`;
+  return `${item?.role || "message"}-${index}`;
+};
+
+const setExpandedMessageKeys = (
+  updater: (prev: Set<string>) => Set<string>
+) => {
+  expandedMessageKeys.value = updater(expandedMessageKeys.value);
+};
+
+const cacheMarkdown = (key: string, text: string) => {
+  if (!text) return "";
+  const cached = markdownCache.get(key);
+  if (cached && cached.text === text) {
+    return cached.html;
+  }
+  const html = md.render(text);
+  markdownCache.set(key, { text, html });
+  return html;
+};
+
+const shouldCollapseText = (text?: string) =>
+  typeof text === "string" && text.length > COLLAPSE_THRESHOLD;
+
+const isMessageCollapsed = (item: any, index: number) => {
+  if (!shouldCollapseText(item?.text)) return false;
+  const key = getMessageKey(item, index);
+  return !expandedMessageKeys.value.has(key);
+};
+
+const toggleMessageCollapse = (item: any, index: number) => {
+  const key = getMessageKey(item, index);
+  setExpandedMessageKeys(prev => {
+    const next = new Set(prev);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    return next;
+  });
+  if (!isMessageCollapsed(item, index)) {
+    // 预渲染全文，避免展开瞬间卡顿
+    cacheMarkdown(`full-${key}`, item?.text || "");
+  }
+};
+
+const getCollapsedPreviewHtml = (item: any, index: number) => {
+  const key = getMessageKey(item, index);
+  const text = item?.text || "";
+  const previewText =
+    text.slice(0, COLLAPSE_PREVIEW_LENGTH) +
+    (text.length > COLLAPSE_PREVIEW_LENGTH ? "..." : "");
+  return cacheMarkdown(`preview-${key}`, previewText);
+};
+
+const getFullContentHtml = (item: any, index: number) => {
+  const key = getMessageKey(item, index);
+  return cacheMarkdown(`full-${key}`, item?.text || "");
+};
+
 const onScroll = ({ scrollTop }: { scrollTop: number }) => {
   if (isProgrammaticScroll.value) {
     // 延迟重置，避免事件同步问题
@@ -62,7 +134,10 @@ onUnmounted(() => {
       @mouseleave="autoScrollDownDisabled = false"
     >
       <div ref="messageInnerRef" class="message-list-inner">
-        <template v-for="(item, index) in messageList" :key="index">
+        <template
+          v-for="(item, index) in messageList"
+          :key="item.eventId ?? `${item.role}-${index}`"
+        >
           <div
             v-if="!(item.text && item.text.startsWith('<backend-reply-start>'))"
             :ref="
@@ -99,8 +174,39 @@ onUnmounted(() => {
               }}</span> -->
               <div
                 v-if="item.text && !item.formConfig && !item.taskInfo"
-                v-html="md.render(item.text)"
-              />
+                class="message-content"
+              >
+                <div
+                  :class="[
+                    'message-html',
+                    { collapsed: isMessageCollapsed(item, index) }
+                  ]"
+                >
+                  <div
+                    v-if="isMessageCollapsed(item, index)"
+                    class="message-html-inner"
+                    v-html="getCollapsedPreviewHtml(item, index)"
+                  />
+                  <div
+                    v-else
+                    class="message-html-inner"
+                    v-html="getFullContentHtml(item, index)"
+                  />
+                  <div
+                    v-if="isMessageCollapsed(item, index)"
+                    class="message-html-gradient"
+                  />
+                </div>
+                <el-button
+                  v-if="shouldCollapseText(item.text)"
+                  class="collapse-btn"
+                  link
+                  type="primary"
+                  @click="toggleMessageCollapse(item, index)"
+                >
+                  {{ isMessageCollapsed(item, index) ? "展开全部" : "收起" }}
+                </el-button>
+              </div>
               <div v-if="item.formConfig">Check form config</div>
               <div v-if="item.taskInfo">View task info</div>
             </div>
@@ -227,6 +333,45 @@ onUnmounted(() => {
           /* 暂时用不到 */
           width: unset;
           max-width: calc(100% - 196px);
+        }
+
+        .message-content {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .message-html {
+          position: relative;
+
+          &.collapsed .message-html-inner {
+            max-height: 420px;
+            overflow: hidden;
+          }
+        }
+
+        .message-html-inner {
+          width: 100%;
+          overflow-wrap: anywhere;
+        }
+
+        .message-html-gradient {
+          position: absolute;
+          right: 0;
+          bottom: 0;
+          left: 0;
+          height: 72px;
+          pointer-events: none;
+          background: linear-gradient(
+            180deg,
+            rgb(255 255 255 / 0%) 0%,
+            var(--el-bg-color) 100%
+          );
+        }
+
+        .collapse-btn {
+          align-self: flex-start;
+          padding: 0;
         }
       }
 
