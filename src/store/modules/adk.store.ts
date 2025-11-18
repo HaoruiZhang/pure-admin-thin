@@ -432,7 +432,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
                 {
                   key: "userFormConfig",
                   type: "userFormConfig",
-                  data: JSON.stringify(this.userFormConfig)
+                  data: fields
                 },
                 "*"
               );
@@ -617,7 +617,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
               {
                 key: "userFormConfig",
                 type: "userFormConfig",
-                data: JSON.stringify(this.userFormConfig)
+                data: fields
               },
               "*"
             );

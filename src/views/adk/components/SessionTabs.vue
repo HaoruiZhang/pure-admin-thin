@@ -6,7 +6,7 @@ import { getSessionListByDays } from "../utils";
 import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store/modules/adk.store";
 const adkStore = useADKChatStore();
-const { sessionList, currentSession } = storeToRefs(adkStore);
+const { sessionList, currentSession, isUserNewMessage } = storeToRefs(adkStore);
 
 defineOptions({
   name: "ADK-SessionTabs"
@@ -20,6 +20,7 @@ const handleClickSession = async (item: any) => {
     return;
   }
   console.log("▶️ 点击了Session列表的session: ", item);
+  isUserNewMessage.value = false;
   await adkStore.setCurrentSession(item.id);
   await nextTick();
   adkStore.scrollToBottomSmooth();
