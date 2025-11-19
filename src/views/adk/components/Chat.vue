@@ -16,6 +16,7 @@ defineOptions({
         <ChatMessage :send-loading="true" />
       </el-splitter-panel>
       <el-splitter-panel
+        v-if="false"
         :size="48"
         :resizable="false"
         class="chat-input-buttons"

@@ -6,7 +6,7 @@ import { onCopyDom, onRunDom } from "../utils";
 import { useADKChatStore } from "@/store/modules/adk.store";
 import mermaid from "mermaid";
 const adkStore = useADKChatStore();
-const { messageList, sendLoading } = storeToRefs(adkStore);
+const { messageList, sendLoading, currentSession } = storeToRefs(adkStore);
 defineOptions({
   name: "ADK-ChatMessage"
 });
@@ -175,6 +175,20 @@ const onScroll = ({ scrollTop }: { scrollTop: number }) => {
   }
 };
 
+const viewTaskInfo = (message: any) => {
+  console.log(message);
+  if (!message.taskInfo && !message.formConfig) return;
+  window.parent.postMessage(
+    {
+      key: "showTaskInfo",
+      type: "showTaskInfo",
+      eventId: message.eventId,
+      sessionId: currentSession.value.id
+    },
+    "*"
+  );
+};
+
 onMounted(async () => {
   // 初始化 mermaid（仅在浏览器环境中）
   if (typeof window !== "undefined" && mermaid && mermaid.initialize) {
@@ -251,9 +265,11 @@ onUnmounted(() => {
                     item.functionCall ||
                     item.functionResponse ||
                     item.formConfig ||
-                    item.taskInfo
+                    item.taskInfo,
+                  'is-btn-link': item.taskInfo || item.formConfig
                 }
               ]"
+              @click="viewTaskInfo(item)"
             >
               <div v-if="item.functionCall">
                 {{ item.functionCall?.name }}
@@ -425,6 +441,18 @@ onUnmounted(() => {
           /* 暂时用不到 */
           width: unset;
           max-width: calc(100% - 196px);
+        }
+
+        &.is-btn-link {
+          cursor: pointer;
+        }
+
+        &.is-btn-link:hover {
+          color: var(--el-color-primary);
+        }
+
+        &.is-btn-link:active {
+          color: var(--el-color-primary);
         }
 
         .message-content {
