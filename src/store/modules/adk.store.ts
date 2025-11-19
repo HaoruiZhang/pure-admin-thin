@@ -197,12 +197,21 @@ export const useADKChatStore = defineStore("adkChatStore", {
             this.currentSession = sessionDetail;
             this.parseSessionDetail(sessionDetail);
             console.log("▶️ 当前messageList: ", this.messageList);
+            window.parent.postMessage(
+              {
+                key: "updateSessionUrl",
+                type: "_updateSessionUrl",
+                sessionId: this.currentSession.id
+              },
+              "*"
+            );
           }
         });
     },
     startSessionPolling(interval = 5000) {
       if (!this.currentSession?.id) return;
       this.sessionPolling?.stop();
+      this.sendLoading = true;
       this.sessionPolling = createPollingController({
         interval,
         autoStart: true,
@@ -235,6 +244,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     stopSessionPolling() {
       this.sessionPolling?.stop();
       this.sessionPolling = undefined;
+      this.sendLoading = false;
     },
     parseSessionDetail(session: any, startEventIndex = 0, reset = true) {
       if (!session?.events) {
@@ -459,10 +469,11 @@ export const useADKChatStore = defineStore("adkChatStore", {
                 },
                 "*"
               );
+            console.log("📦 从代码块里发送_isFinalResponse");
             window.parent.postMessage(
               {
                 key: "isFinalResponse",
-                type: "isFinalResponse",
+                type: "_isFinalResponse",
                 sessionId: this.currentSession.id,
                 value: true
               },
@@ -573,18 +584,13 @@ export const useADKChatStore = defineStore("adkChatStore", {
         this.isFinalResponse = false;
       }
 
-      if (this.isFinalResponse && this.updateSessionInterval) {
-        // console.log('---- 判断出对话已经结束! ')
-
-        if (this.updateSessionInterval) {
-          clearInterval(this.updateSessionInterval);
-          this.updateSessionInterval = null;
-        }
-
+      if (this.isFinalResponse) {
+        console.log("---- 判断出对话已经结束! ");
+        this.stopSessionPolling();
         window.parent.postMessage(
           {
             key: "isFinalResponse",
-            type: "isFinalResponse",
+            type: "_isFinalResponse",
             sessionId: this.currentSession.id,
             value: true
           },
@@ -594,7 +600,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     },
     handleFinalMessageIfFormConfig() {
       console.log(
-        "🛠️【runSse完成, 手动处理最后一条消息, messages: 】",
+        "🛠️📦【runSse完成, 手动处理最后一条消息, messages: 】",
         this.messageList
       ); // green
 
@@ -643,10 +649,11 @@ export const useADKChatStore = defineStore("adkChatStore", {
               },
               "*"
             );
+          console.log("📦 手动处理最后一条消息发送_isFinalResponse");
           window.parent.postMessage(
             {
               key: "isFinalResponse",
-              type: "isFinalResponse",
+              type: "_isFinalResponse",
               sessionId: this.currentSession.id,
               value: true
             },
@@ -742,10 +749,18 @@ export const useADKChatStore = defineStore("adkChatStore", {
           // 处理
         },
         err => console.error(err),
-        () => {
+        async () => {
           this.sendLoading = false;
           console.log("complete");
           this.handleFinalMessageIfFormConfig();
+          const sessionDetail = (await adkService.getSessionDetail(
+            this.user_info.user_id,
+            this.currentSession.id
+          )) as AdkSession;
+          if (sessionDetail) {
+            this.currentSession = sessionDetail;
+            this.lastSessionSyncTime = sessionDetail.lastUpdateTime;
+          }
         }
       );
       this.userInput = "";

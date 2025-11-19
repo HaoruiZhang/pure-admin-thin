@@ -230,7 +230,7 @@ onUnmounted(() => {
           class="message-box"
         >
           <div class="mat-col AI-mat">
-            <el-button>StAgent </el-button>
+            <el-button v-if="false">StAgent </el-button>
           </div>
           <div class="content-box">
             <span style="white-space: pre-wrap">loading</span>

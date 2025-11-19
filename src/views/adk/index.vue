@@ -16,6 +16,13 @@ function init() {
   // 增加监听message事件
   window.addEventListener("message", event => {
     console.log("📢 收到了message事件: 【", event.data.key, "】", event.data);
+    switch (event.data.key) {
+      case "startRunTask":
+        adkStore.startSessionPolling();
+        break;
+      default:
+        break;
+    }
   });
 }
 function parseUrlParams() {
