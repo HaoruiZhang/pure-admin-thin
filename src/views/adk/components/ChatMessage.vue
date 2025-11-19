@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref, nextTick, onUnmounted } from "vue";
+import { onMounted, ref, nextTick, onUnmounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { md } from "../utils/markdown";
 import { onCopyDom, onRunDom } from "../utils";
 import { useADKChatStore } from "@/store/modules/adk.store";
+import mermaid from "mermaid";
 const adkStore = useADKChatStore();
 const { messageList, sendLoading } = storeToRefs(adkStore);
 defineOptions({
@@ -49,7 +50,72 @@ const cacheMarkdown = (key: string, text: string) => {
   }
   const html = md.render(text);
   markdownCache.set(key, { text, html });
+  // 在下一个 tick 初始化 mermaid
+  nextTick(() => {
+    initMermaid();
+  });
   return html;
+};
+
+// 初始化 mermaid 图表
+const initMermaid = async () => {
+  // 确保在浏览器环境中运行
+  if (typeof window === "undefined" || !mermaid) return;
+
+  try {
+    if (!messageInnerRef.value) return;
+
+    // 查找所有未渲染的 mermaid 元素并渲染
+    const mermaidElements = messageInnerRef.value.querySelectorAll(
+      "pre.mermaid:not([data-processed])"
+    );
+
+    if (mermaidElements && mermaidElements.length > 0) {
+      for (let i = 0; i < mermaidElements.length; i++) {
+        const element = mermaidElements[i] as HTMLElement;
+
+        // 检查是否已经渲染过（包含 SVG 标签）
+        if (element.querySelector("svg")) {
+          element.setAttribute("data-processed", "true");
+          continue;
+        }
+
+        const id = `mermaid-${Date.now()}-${i}`;
+        element.setAttribute("data-processed", "true");
+
+        // 优先从 data-code 属性获取原始代码，如果没有则从 textContent 获取
+        let code =
+          element.getAttribute("data-code") || element.textContent || "";
+
+        // 如果从 data-code 获取，需要解码 HTML 实体
+        if (element.getAttribute("data-code")) {
+          const tempDiv = document.createElement("div");
+          tempDiv.innerHTML = code;
+          code = tempDiv.textContent || tempDiv.innerText || code;
+        }
+
+        // 清理代码，移除可能的空白字符
+        code = code.trim();
+
+        if (!code) {
+          continue;
+        }
+
+        try {
+          if (mermaid.render) {
+            const { svg } = await mermaid.render(id, code);
+            element.innerHTML = svg;
+          }
+        } catch (error) {
+          console.error("Mermaid render error:", error);
+          // 如果渲染失败，移除 data-processed 标记以便重试
+          element.removeAttribute("data-processed");
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Mermaid initialization error:", error);
+  }
 };
 
 const shouldCollapseText = (text?: string) =>
@@ -110,6 +176,15 @@ const onScroll = ({ scrollTop }: { scrollTop: number }) => {
 };
 
 onMounted(async () => {
+  // 初始化 mermaid（仅在浏览器环境中）
+  if (typeof window !== "undefined" && mermaid && mermaid.initialize) {
+    try {
+      mermaid.initialize({ startOnLoad: false, theme: "default" });
+    } catch (error) {
+      console.error("Mermaid initialize error:", error);
+    }
+  }
+
   // 抛出代码复制按钮点击事件到全局，方便html字符串添加点击事件
   (window as any).onCopyClick = (event: any) => {
     const dom = event.parentNode.parentNode.parentNode?.children[1];
@@ -121,6 +196,17 @@ onMounted(async () => {
   };
 
   adkStore.registerScrollRef(scrollRef);
+
+  // 监听消息列表变化，初始化 mermaid
+  watch(
+    () => messageList.value,
+    () => {
+      nextTick(() => {
+        initMermaid();
+      });
+    },
+    { deep: true }
+  );
 });
 
 onUnmounted(() => {

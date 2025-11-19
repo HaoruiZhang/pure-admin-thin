@@ -71,6 +71,8 @@
     "markdown-it-directive": "^2.0.6",
     "markdown-it-directive-webcomponents": "^1.2.0",
     "markdown-it-mathjax3": "^5.2.0",
+    "markdown-it-mermaid": "^0.2.5",
+    "mermaid": "^11.12.1",
     "mitt": "^3.0.1",
     "nprogress": "^0.2.0",
     "path-browserify": "^1.0.1",

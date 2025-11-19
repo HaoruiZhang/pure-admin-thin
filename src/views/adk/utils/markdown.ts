@@ -9,6 +9,8 @@ import MarkdownItDirective from "markdown-it-directive";
 import MarkdownItWebcomponents from "markdown-it-directive-webcomponents";
 // import MarkdownItMathjax from "markdown-it-mathjax3";
 import MarkdownItContainer from "markdown-it-container";
+// 不使用 markdown-it-mermaid 插件，改为手动处理，避免在模块加载时访问 document
+// import MarkdownItMermaid from "markdown-it-mermaid";
 
 import { checkIsJSON } from "./index";
 // wrap i18n.global.t to avoid TS union-call incompatibility
@@ -62,6 +64,12 @@ export const md: MarkdownIt = new MarkdownIt({
   breaks: true, // 让单个 \n 也换行
   // 设置代码高亮的配置
   highlight: function (code, language) {
+    // mermaid 代码块由 markdown-it-mermaid 插件处理，跳过 highlight
+    if (language === "mermaid") {
+      // 将原始代码保存到 data-code 属性中，避免后续渲染时获取到 SVG 内容
+      const escapedCode = md.utils.escapeHtml(code);
+      return `<pre class="mermaid" data-code="${escapedCode.replace(/"/g, "&quot;")}">${escapedCode}</pre>`;
+    }
     // 如果识别不到语言,将默认语言置为json
     // console.log(
     //   "highlight code language:",
@@ -276,6 +284,10 @@ export const md: MarkdownIt = new MarkdownIt({
       }
     }
   })
+  // 不使用 markdown-it-mermaid 插件，改为在 highlight 函数中处理，然后在组件中手动渲染
+  // .use(MarkdownItMermaid, {
+  //   theme: "default"
+  // })
   .disable("code"); // 禁用缩进代码块;
 
 export const mdNoBtn: MarkdownIt = new MarkdownIt({
