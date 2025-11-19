@@ -331,18 +331,31 @@ const onScroll = ({ scrollTop }: { scrollTop: number }) => {
   }
 };
 
-const viewTaskInfo = (message: any) => {
+const handleClickMessage = (message: any) => {
   console.log(message);
   if (!message.taskInfo && !message.formConfig) return;
-  window.parent.postMessage(
-    {
-      key: "showTaskInfo",
-      type: "showTaskInfo",
-      eventId: message.eventId,
-      sessionId: currentSession.value.id
-    },
-    "*"
-  );
+  if (message.taskInfo) {
+    window.parent.postMessage(
+      {
+        key: "showTaskInfo",
+        type: "showTaskInfo",
+        eventId: message.eventId,
+        sessionId: currentSession.value.id
+      },
+      "*"
+    );
+  } else if (message.formConfig) {
+    window.parent.postMessage(
+      {
+        key: "userFormConfig",
+        type: "userFormConfig",
+        eventId: message.eventId,
+        data: JSON.parse(JSON.stringify(message.userFormConfig)),
+        sessionId: currentSession.value.id
+      },
+      "*"
+    );
+  }
 };
 
 onMounted(async () => {
@@ -425,7 +438,7 @@ onUnmounted(() => {
                   'is-btn-link': item.taskInfo || item.formConfig
                 }
               ]"
-              @click="viewTaskInfo(item)"
+              @click="handleClickMessage(item)"
             >
               <div v-if="item.functionCall">
                 {{ item.functionCall?.name }}
