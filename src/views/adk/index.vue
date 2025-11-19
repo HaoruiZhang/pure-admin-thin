@@ -56,8 +56,10 @@ async function ensureSessionList() {
 onMounted(async () => {
   console.log("⬇️⬇️⬇️⬇️⬇️⬇️ 挂载了ADK组件 ⬇️⬇️⬇️⬇️⬇️⬇️");
   init();
+  await adkStore.getSessionList();
+  await adkStore.getListReady;
   await bootstrapSession();
-  await ensureSessionList();
+
   await nextTick();
   adkStore.scrollToBottomSmooth();
 });

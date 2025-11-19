@@ -31,11 +31,6 @@ const onNewSessionClick = () => {
 
 onMounted(async () => {
   // TODO: 使用事件通知：加载完毕列表后，默认取第一个
-  setTimeout(() => {
-    if (sessionList.value.length) {
-      handleClickSession(sessionList.value[0]);
-    }
-  }, 500);
 });
 </script>
 

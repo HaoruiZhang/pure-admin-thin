@@ -57,6 +57,155 @@ const cacheMarkdown = (key: string, text: string) => {
   return html;
 };
 
+// 初始化 mermaid 图表的缩放功能
+const initMermaidZoom = (wrapper: HTMLElement) => {
+  if (typeof window === "undefined") return;
+
+  const svg = wrapper.querySelector("svg");
+  if (!svg) return;
+
+  let scale = 1;
+  let translateX = 0;
+  let translateY = 0;
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+  let startTranslateX = 0;
+  let startTranslateY = 0;
+
+  // 创建控制按钮容器
+  const controls = document.createElement("div");
+  controls.className = "mermaid-controls";
+
+  // 更新光标状态
+  const updateCursor = () => {
+    if (scale > 1) {
+      wrapper.style.cursor = isDragging ? "grabbing" : "grab";
+      wrapper.classList.add("mermaid-zoomed");
+    } else {
+      wrapper.style.cursor = "default";
+      wrapper.classList.remove("mermaid-zoomed");
+    }
+  };
+
+  // 更新变换
+  const updateTransform = () => {
+    svg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    svg.style.transformOrigin = "0 0";
+    updateCursor();
+  };
+
+  // 放大按钮
+  const zoomInBtn = document.createElement("button");
+  zoomInBtn.className = "mermaid-zoom-btn";
+  zoomInBtn.innerHTML = "+";
+  zoomInBtn.title = "放大";
+  zoomInBtn.onclick = e => {
+    e.stopPropagation();
+    e.preventDefault();
+    scale = Math.min(scale * 1.2, 10);
+    updateTransform();
+  };
+
+  // 缩小按钮
+  const zoomOutBtn = document.createElement("button");
+  zoomOutBtn.className = "mermaid-zoom-btn";
+  zoomOutBtn.innerHTML = "−";
+  zoomOutBtn.title = "缩小";
+  zoomOutBtn.onclick = e => {
+    e.stopPropagation();
+    e.preventDefault();
+    scale = Math.max(scale / 1.2, 0.25);
+    updateTransform();
+  };
+
+  // 重置按钮
+  const resetBtn = document.createElement("button");
+  resetBtn.className = "mermaid-zoom-btn";
+  resetBtn.innerHTML = "↻";
+  resetBtn.title = "重置";
+  resetBtn.onclick = e => {
+    e.stopPropagation();
+    e.preventDefault();
+    scale = 1;
+    translateX = 0;
+    translateY = 0;
+    updateTransform();
+  };
+
+  controls.appendChild(zoomInBtn);
+  controls.appendChild(zoomOutBtn);
+  controls.appendChild(resetBtn);
+  wrapper.appendChild(controls);
+
+  // 鼠标滚轮缩放
+  wrapper.addEventListener("wheel", e => {
+    if (!e.ctrlKey && !e.metaKey) return; // 需要按住 Ctrl/Cmd
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = wrapper.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const oldScale = scale;
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    scale = Math.max(0.25, Math.min(scale * delta, 10));
+
+    // 以鼠标位置为中心缩放
+    const scaleChange = scale / oldScale;
+    translateX = mouseX - (mouseX - translateX) * scaleChange;
+    translateY = mouseY - (mouseY - translateY) * scaleChange;
+
+    updateTransform();
+  });
+
+  // 双击重置
+  wrapper.addEventListener("dblclick", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    scale = 1;
+    translateX = 0;
+    translateY = 0;
+    updateTransform();
+  });
+
+  // 鼠标拖拽平移
+  wrapper.addEventListener("mousedown", e => {
+    if (e.button !== 0) return; // 只处理左键
+    if (scale <= 1) return; // 只有在放大时才允许拖拽
+
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    startTranslateX = translateX;
+    startTranslateY = translateY;
+    updateCursor();
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", e => {
+    if (!isDragging) return;
+    translateX = startTranslateX + (e.clientX - startX);
+    translateY = startTranslateY + (e.clientY - startY);
+    updateTransform();
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (isDragging) {
+      isDragging = false;
+      updateCursor();
+    }
+  });
+
+  // 设置初始样式
+  wrapper.style.position = "relative";
+  wrapper.style.overflow = "hidden";
+  wrapper.style.cursor = "default";
+  svg.style.transition = "transform 0.1s ease-out";
+  updateCursor();
+};
+
 // 初始化 mermaid 图表
 const initMermaid = async () => {
   // 确保在浏览器环境中运行
@@ -104,7 +253,14 @@ const initMermaid = async () => {
         try {
           if (mermaid.render) {
             const { svg } = await mermaid.render(id, code);
-            element.innerHTML = svg;
+            // 包装 SVG 以支持缩放功能
+            const wrapper = document.createElement("div");
+            wrapper.className = "mermaid-wrapper";
+            wrapper.innerHTML = svg;
+            element.innerHTML = "";
+            element.appendChild(wrapper);
+            // 初始化缩放功能
+            initMermaidZoom(wrapper);
           }
         } catch (error) {
           console.error("Mermaid render error:", error);
@@ -510,6 +666,77 @@ onUnmounted(() => {
 
       pre + pre {
         margin-top: 12px;
+      }
+
+      /* Mermaid 图表缩放样式 */
+      :deep(.mermaid-wrapper) {
+        position: relative;
+        min-height: 100px;
+        overflow: hidden;
+        background: var(--el-bg-color-page);
+        border-radius: 4px;
+
+        svg {
+          display: block;
+          width: 100%;
+          height: auto;
+        }
+
+        &.mermaid-zoomed {
+          cursor: grab;
+
+          &:active {
+            cursor: grabbing;
+          }
+        }
+      }
+
+      :deep(.mermaid-controls) {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 10;
+        display: flex;
+        visibility: hidden;
+        gap: 4px;
+        padding: 4px;
+        background: var(--el-bg-color);
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+
+      :deep(.mermaid-wrapper:hover .mermaid-controls) {
+        opacity: 1;
+      }
+
+      :deep(.mermaid-zoom-btn) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        margin: 0;
+        font-size: 16px;
+        line-height: 1;
+        color: var(--el-text-color-primary);
+        cursor: pointer;
+        background: var(--el-bg-color);
+        border: 1px solid var(--el-border-color);
+        border-radius: 4px;
+        transition: all 0.2s;
+
+        &:hover {
+          color: var(--el-color-primary);
+          background: var(--el-color-primary-light-9);
+          border-color: var(--el-color-primary);
+        }
+
+        &:active {
+          transform: scale(0.95);
+        }
       }
     }
   }
