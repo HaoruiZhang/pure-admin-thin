@@ -6,7 +6,14 @@ import { onCopyDom, onRunDom } from "../utils";
 import { useADKChatStore } from "@/store/modules/adk.store";
 import mermaid from "mermaid";
 const adkStore = useADKChatStore();
-const { messageList, sendLoading, currentSession } = storeToRefs(adkStore);
+const {
+  messageList,
+  sendLoading,
+  currentSession,
+  operatingFormEventId,
+  operatingFormIndex,
+  user_info
+} = storeToRefs(adkStore);
 defineOptions({
   name: "ADK-ChatMessage"
 });
@@ -331,8 +338,8 @@ const onScroll = ({ scrollTop }: { scrollTop: number }) => {
   }
 };
 
-const handleClickMessage = (message: any) => {
-  console.log(message);
+const handleClickMessage = (message: any, index: number) => {
+  console.log("👻 点击消息: ", message);
   if (!message.taskInfo && !message.formConfig) return;
   if (message.taskInfo) {
     window.parent.postMessage(
@@ -345,6 +352,8 @@ const handleClickMessage = (message: any) => {
       "*"
     );
   } else if (message.formConfig) {
+    operatingFormEventId.value = message.eventId;
+    operatingFormIndex.value = index;
     window.parent.postMessage(
       {
         key: "userFormConfig",
@@ -438,8 +447,26 @@ onUnmounted(() => {
                   'is-btn-link': item.taskInfo || item.formConfig
                 }
               ]"
-              @click="handleClickMessage(item)"
+              @click="handleClickMessage(item, index)"
             >
+              <div
+                v-if="user_info.user_id === 'zhanghaorui'"
+                class="debugger-info"
+                style="
+                  padding: 4px;
+                  font-size: 12px;
+                  color: #999;
+                  white-space: pre-wrap;
+                  border: 1px solid #ddd;
+                  border-radius: 4px;
+                "
+              >
+                eventId: {{ item.eventId }} <br />
+                functionCall.id: {{ item.functionCall?.id }} <br />
+                functionResponse.id: {{ item.functionResponse?.id }} <br />
+                formConfig.id: {{ item.formConfig?.id }} <br />
+                taskInfo.id: {{ item.taskInfo?.id }}
+              </div>
               <div v-if="item.functionCall">
                 {{ item.functionCall?.name }}
               </div>

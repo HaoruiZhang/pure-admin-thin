@@ -72,6 +72,30 @@ export const adkService = {
       null
     );
   },
+
+  modifyEvent: (
+    userId: string,
+    appName: string,
+    sessionId: string,
+    eventID: string,
+    form: any
+  ) => {
+    const url = `/apps/${appName}/users/${userId}/sessions/${sessionId}/events/${eventID}`;
+
+    return adkHttp.request("put", url, {
+      data: {
+        modified_content: {
+          role: "model",
+          parts: [
+            {
+              text: form
+            }
+          ]
+        }
+      }
+    });
+  },
+
   /**
    * runSseGenerator: 返回一个 AsyncGenerator，按服务端每条 "data:" 行 yield 字符串（JSON 字符串）
    * 调用者负责 JSON.parse 并处理业务逻辑。

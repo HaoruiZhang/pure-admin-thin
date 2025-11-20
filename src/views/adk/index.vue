@@ -5,8 +5,18 @@ import { storeToRefs } from "pinia";
 import LeftSidePanel from "./components/LeftSidePanel.vue";
 import MainArea from "./components/MainArea.vue";
 import { useADKChatStore } from "@/store/modules/adk.store";
+import { adkService } from "@/api/adk.service";
 const adkStore = useADKChatStore();
-const { sessionList, sendLoading, currentSession } = storeToRefs(adkStore);
+const {
+  sessionList,
+  messageList,
+  operatingFormEventId,
+  currentSession,
+  user_info,
+  eventData,
+  operatingFormIndex,
+  userFormConfig
+} = storeToRefs(adkStore);
 
 const emit = defineEmits(["getDetail"]);
 defineOptions({
@@ -19,6 +29,58 @@ function init() {
     switch (event.data.key) {
       case "startRunTask":
         adkStore.startSessionPolling();
+        break;
+
+      case "task-state":
+        const state = event.data.state;
+        if (["error", "noLogin"].includes(state)) {
+          adkStore.stopSessionPolling();
+        } else if (state === "success") {
+          const eventId = event.data.eventId;
+          for (let i = 0; i < messageList.value.length; i++) {
+            const message = messageList.value[i];
+            if (message.eventId === eventId && message.taskInfo) {
+              console.log("==== 找到成功运行的message: ", message);
+              message.taskInfo.state = "success";
+              break;
+            }
+          }
+        }
+        break;
+
+      case "submitFormConfig":
+        console.log("==== 提交表单", event.data);
+
+        // 更新对话
+        adkService
+          .modifyEvent(
+            user_info.value.user_id,
+            "agent",
+            currentSession.value.id,
+            operatingFormEventId.value,
+            eventData.value
+              .get(operatingFormEventId.value)
+              .content.parts[0].text.replace(
+                userFormConfig.value[0],
+                event.data.data
+              )
+          )
+          .then((res: any) => {
+            if (res && res.success) {
+              // 更新本地eventData
+              messageList.value[
+                operatingFormIndex.value - 1
+              ].userFormConfig[0] = event.data.data;
+              window.parent.postMessage(
+                {
+                  key: "modified-event-success",
+                  type: "_modified-event-success",
+                  sessionId: currentSession.value.id
+                },
+                "*"
+              );
+            }
+          });
         break;
       default:
         break;
@@ -59,7 +121,6 @@ onMounted(async () => {
   await adkStore.getSessionList();
   await adkStore.getListReady;
   await bootstrapSession();
-
   await nextTick();
   adkStore.scrollToBottomSmooth();
 });

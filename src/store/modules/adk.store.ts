@@ -40,6 +40,7 @@ interface adkChatState {
   longRunningEvents?: any[];
   userSpecifiedPath?: string;
   functionCallEventId?: string;
+  operatingFormEventId?: string;
   user_info?: {
     user_id: string;
     access_times?: number;
@@ -53,6 +54,7 @@ interface adkChatState {
   setCurrentSessionReady?: AccessiblePromise<void>;
   sessionPolling?: PollingController;
   lastSessionSyncTime?: number;
+  operatingFormIndex?: number;
 }
 
 export const useADKChatStore = defineStore("adkChatStore", {
@@ -67,6 +69,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
     isModelThinkingSubject: false,
     isUserNewMessage: false,
     currentSession: getNewSession(),
+    operatingFormEventId: "",
+    operatingFormIndex: 0,
     sessionList: [],
     messageList: [],
     userFormConfig: null,
@@ -101,7 +105,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
     async scrollToBottom() {
       await nextTick();
       setTimeout(() => {
-        console.log(this.scrollRef);
         this.scrollRef.wrapRef.scrollTo({
           top: this.scrollRef.wrapRef.scrollHeight,
           behavior: "smooth"
@@ -123,31 +126,34 @@ export const useADKChatStore = defineStore("adkChatStore", {
       this.messageList = [];
       // this.artifacts = [];
     },
+    storeEvents(part: any, e: any, index: number) {
+      let title = "";
+      console.log(
+        "▶️ 存储事件: \npart: ",
+        part,
+        "\ne: ",
+        e,
+        "\nindex: ",
+        index
+      );
 
-    // updateSelectedSessionUrl() {
-    //   const url = this.router
-    //     .createUrlTree([], {
-    //       queryParams: {
-    //         session:
-    //           this.sessionId || window.sessionStorage.getItem("sessionId")!
-    //       },
-    //       queryParamsHandling: "merge"
-    //     })
-    //     .toString();
-    //   this.location.replaceState(url);
-    //   window.parent.postMessage(
-    //     {
-    //       key: "updateSessionUrl",
-    //       type: "updateSessionUrl",
-    //       sessionId:
-    //         this.sessionId || window.sessionStorage.getItem("sessionId")!
-    //     },
-    //     "*"
-    //   );
-    //   setTimeout(() => {
-    //     this.scrollToBottom();
-    //   });
-    // },
+      if (part.text) {
+        title += "text:" + part.text;
+      } else if (part.functionCall) {
+        title += "functionCall:" + part.functionCall.name;
+      } else if (part.functionResponse) {
+        title += "functionResponse:" + part.functionResponse.name;
+      } else if (part.executableCode) {
+        title += "executableCode:" + part.executableCode.code.slice(0, 10);
+      } else if (part.codeExecutionResult) {
+        title += "codeExecutionResult:" + part.codeExecutionResult.outcome;
+      } else if (part.errorMessage) {
+        title += "errorMessage:" + part.errorMessage;
+      }
+      e.title = title;
+      this.eventData.set(e.id, e);
+      this.eventData = new Map(this.eventData);
+    },
 
     async scrollToBottomSmooth() {
       await nextTick();
@@ -173,7 +179,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
     async getSessionList() {
       adkService.getSessionList(this.user_info.user_id).then((res: any[]) => {
         console.log("▶️ 向ADK后端查询Session列表: ", res);
-        console.log("▶️ 当前currentSession: ", this.currentSession);
 
         if (res.length) {
           const sortedRes = res.sort((a, b) => {
@@ -196,7 +201,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
           if (sessionDetail) {
             this.currentSession = sessionDetail;
             this.parseSessionDetail(sessionDetail);
-            console.log("▶️ 当前messageList: ", this.messageList);
             window.parent.postMessage(
               {
                 key: "updateSessionUrl",
@@ -269,9 +273,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
             event.author === "user" ? "user" : "bot"
           );
           index += 1;
-          // TODO if (event.author && event.author !== "user") {
-          //   this.storeEvents(part, event, index);
-          // }
+          if (event.author && event.author !== "user") {
+            this.storeEvents(part, event, index);
+          }
         });
       });
       this.lastSessionSyncTime = session?.lastUpdateTime;
@@ -341,25 +345,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
       //   });
     },
     insertMessageBeforeLoadingMessage(message: any) {
-      console.log(
-        "📩【insertMessageBeforeLoadingMessage】, message:",
-        message,
-        this.messageList
-      );
-      // console.log('   ---- 当前messages:', this.messageList)
-      const lastMessage = this.messageList[this.messageList.length - 1];
       const messagesToInsert = Array.isArray(message) ? message : [message];
-      if (lastMessage?.isLoading) {
-        console.log("     ---- 在loading消息前插入消息: ", messagesToInsert);
-        this.messageList.splice(
-          this.messageList.length - 1,
-          0,
-          ...messagesToInsert
-        );
-      } else {
-        console.log("     ---- 直接在末尾插入消息: ", messagesToInsert);
-        this.messageList.push(...messagesToInsert);
-      }
+      this.messageList.push(...messagesToInsert);
       this.scrollToBottomSmooth();
     },
     storeMessage(
@@ -568,6 +555,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         this.insertMessageBeforeLoadingMessage(message);
       }
     },
+
     checkFinalResponse(part: any, e?: any) {
       // 判断是否对话结束
       // console.log('【checkFinalResponse】', part, e);
@@ -606,7 +594,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
 
       const lastMessage = this.messageList[this.messageList.length - 1];
       if (!lastMessage?.text) return;
-      // console.log('---- lastMessage', lastMessage);
       this.messageList.pop();
       lastMessage.eventId = localStorage.getItem("finalEventId")!;
       if (lastMessage.text.includes("<FORM_CONFIG>")) {
@@ -678,31 +665,18 @@ export const useADKChatStore = defineStore("adkChatStore", {
 
     async sendMessage2() {
       this.sendLoading = true;
-      console.log("当前session: ", this.currentSession);
-      // if (this.messageList.length === 0) {
-      //   this.scrollContainer.nativeElement.addEventListener("wheel", () => {
-      //     this.scrollInterruptedSubject.next(true);
-      //   });
-      //   this.scrollContainer.nativeElement.addEventListener("touchmove", () => {
-      //     this.scrollInterruptedSubject.next(true);
-      //   });
-      // }
-      // this.scrollInterruptedSubject.next(false);
 
-      // event.preventDefault();
       if (!this.userInput.trim() && this.selectedFiles?.length <= 0) return;
 
       if (this.updateSessionInterval) {
         clearInterval(this.updateSessionInterval);
         this.updateSessionInterval = null;
       }
-
       // Add user message
       if (!!this.userInput.trim()) {
         this.messageList.push({ role: "user", text: this.userInput });
         this.isUserNewMessage = true;
       }
-
       // Add user message attachments
       if (this.selectedFiles?.length > 0) {
         const messageAttachments = this.selectedFiles.map(file => ({
@@ -714,11 +688,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
           attachments: messageAttachments
         });
       }
-
       this.scrollToBottomSmooth();
-
       let index = this.eventMessageIndexArray.length - 1;
-
       this.sseController = startSse(
         {
           appName: this.currentSession.appName,
@@ -745,6 +716,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             }
           } else if (chunkJson.errorMessage) {
             console.log("error, chunkJson, index: ", chunkJson, index);
+            this.storeEvents(chunkJson, chunkJson, index);
           }
           // 处理
         },
@@ -773,19 +745,18 @@ export const useADKChatStore = defineStore("adkChatStore", {
     ) {
       const renderedContent =
         chunkJson.groundingMetadata?.searchEntryPoint?.renderedContent;
-
       if (part.text) {
         this.isModelThinkingSubject = false;
         const newChunk = part.text;
         if (part.thought) {
           if (newChunk !== this.latestThought) {
+            this.storeEvents(part, chunkJson, index);
             const thoughtMessage = {
               role: "bot",
               text: processThoughtText(newChunk),
               thought: true,
               eventId: chunkJson.id
             };
-
             this.insertMessageBeforeLoadingMessage(thoughtMessage);
           }
           this.latestThought = newChunk;
@@ -796,12 +767,10 @@ export const useADKChatStore = defineStore("adkChatStore", {
             thought: part.thought ? true : false,
             eventId: chunkJson.id
           };
-
           if (renderedContent) {
             this.streamingTextMessage.renderedContent =
               chunkJson.groundingMetadata.searchEntryPoint.renderedContent;
           }
-
           this.insertMessageBeforeLoadingMessage(this.streamingTextMessage);
         } else {
           if (renderedContent) {
@@ -809,6 +778,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
               chunkJson.groundingMetadata.searchEntryPoint.renderedContent;
           }
           if (newChunk == this.streamingTextMessage.text) {
+            this.storeEvents(part, chunkJson, index);
             this.eventMessageIndexArray[index] = newChunk;
             this.streamingTextMessage = null;
             localStorage.setItem("finalEventId", chunkJson.id);
@@ -830,6 +800,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         }
       } else if (!part.thought) {
         this.isModelThinkingSubject = false;
+        this.storeEvents(part, chunkJson, index);
         this.storeMessage(
           part,
           chunkJson,
