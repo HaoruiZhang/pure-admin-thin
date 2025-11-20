@@ -50,12 +50,10 @@ function init() {
 
       case "submitFormConfig":
         console.log("==== 提交表单", event.data);
-
         // 更新对话
         adkService
           .modifyEvent(
             user_info.value.user_id,
-            "agent",
             currentSession.value.id,
             operatingFormEventId.value,
             eventData.value

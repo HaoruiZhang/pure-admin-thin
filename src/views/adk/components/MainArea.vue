@@ -26,7 +26,7 @@ const handleClickAffixButton = () => {
       <!-- <div>End Session</div> -->
       <el-affix
         :offset="120"
-        style=" width: 32px;height: 32px"
+        style="width: 32px; height: 32px"
         class="affix-button"
       >
         <el-button circle @click="handleClickAffixButton">👻</el-button>

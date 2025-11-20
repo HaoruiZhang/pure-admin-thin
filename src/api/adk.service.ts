@@ -75,12 +75,11 @@ export const adkService = {
 
   modifyEvent: (
     userId: string,
-    appName: string,
     sessionId: string,
     eventID: string,
     form: any
   ) => {
-    const url = `/apps/${appName}/users/${userId}/sessions/${sessionId}/events/${eventID}`;
+    const url = `/apps/agents/users/${userId}/sessions/${sessionId}/events/${eventID}`;
 
     return adkHttp.request("put", url, {
       data: {
