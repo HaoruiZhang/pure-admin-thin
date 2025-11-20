@@ -21,6 +21,8 @@ const handleClickSession = async (item: any) => {
   }
   console.log("▶️ 点击了Session列表的session: ", item);
   isUserNewMessage.value = false;
+  adkStore.stopSessionPolling();
+  adkStore.stopSSE();
   await adkStore.setCurrentSession(item.id);
   await nextTick();
   adkStore.scrollToBottomSmooth();

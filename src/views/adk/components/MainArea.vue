@@ -3,7 +3,8 @@ import Chat from "./Chat.vue";
 import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store/modules/adk.store";
 const adkStore = useADKChatStore();
-const { currentSession, messageList, eventData } = storeToRefs(adkStore);
+const { currentSession, messageList, eventData, isDebugMode } =
+  storeToRefs(adkStore);
 defineOptions({
   name: "ADK-Main"
 });
@@ -24,13 +25,22 @@ const handleClickAffixButton = () => {
       <!-- <el-divider /> -->
       <!-- <div>End Session</div> -->
       <!-- <div>End Session</div> -->
-      <el-affix
-        :offset="120"
-        style="width: 32px; height: 32px"
-        class="affix-button"
-      >
-        <el-button circle @click="handleClickAffixButton">👻</el-button>
-      </el-affix>
+      <div>
+        <el-affix
+          :offset="120"
+          style="width: 32px; height: 32px"
+          class="affix-button"
+        >
+          <el-button circle @click="handleClickAffixButton">👻</el-button>
+        </el-affix>
+        <el-affix
+          :offset="160"
+          style="width: 32px; height: 32px"
+          class="affix-button"
+        >
+          <el-switch v-model="isDebugMode" style="width: 32px; height: 32px" />
+        </el-affix>
+      </div>
     </div>
 
     <Chat />

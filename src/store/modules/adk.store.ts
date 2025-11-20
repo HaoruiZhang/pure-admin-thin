@@ -55,6 +55,7 @@ interface adkChatState {
   sessionPolling?: PollingController;
   lastSessionSyncTime?: number;
   operatingFormIndex?: number;
+  isDebugMode: boolean;
 }
 
 export const useADKChatStore = defineStore("adkChatStore", {
@@ -70,6 +71,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     isUserNewMessage: false,
     currentSession: getNewSession(),
     operatingFormEventId: "",
+    isDebugMode: false,
     operatingFormIndex: 0,
     sessionList: [],
     messageList: [],
@@ -814,7 +816,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
 
     stopSSE() {
       // 主动停止
-      this.sseController.stop();
+      this.sseController?.stop?.();
     }
   }
 });

@@ -12,7 +12,8 @@ const {
   currentSession,
   operatingFormEventId,
   operatingFormIndex,
-  user_info
+  user_info,
+  isDebugMode
 } = storeToRefs(adkStore);
 defineOptions({
   name: "ADK-ChatMessage"
@@ -32,6 +33,7 @@ const COLLAPSE_THRESHOLD = 4000; // 字符阈值，超过则折叠
 const COLLAPSE_PREVIEW_LENGTH = 1200; // 预览长度
 
 const expandedMessageKeys = ref<Set<string>>(new Set());
+const expandedFunctionCalls = ref<Set<string>>(new Set());
 const markdownCache = new Map<string, { text: string; html: string }>();
 
 const getMessageKey = (item: any, index: number) => {
@@ -41,6 +43,80 @@ const getMessageKey = (item: any, index: number) => {
     return `fn-res-${item.functionResponse.id}-${index}`;
   if (item?.taskInfo?.eventId) return `task-${item.taskInfo.eventId}`;
   return `${item?.role || "message"}-${index}`;
+};
+
+// 检查 functionCall 是否有对应的 functionResponse
+const hasFunctionResponse = (functionCallId: string) => {
+  if (!functionCallId) return false;
+  return messageList.value.some(
+    msg => msg?.functionResponse?.id === functionCallId
+  );
+};
+
+// 获取对应的 functionResponse
+const getFunctionResponse = (functionCallId: string) => {
+  if (!functionCallId) return null;
+  const message = messageList.value.find(
+    msg => msg?.functionResponse?.id === functionCallId
+  );
+  return message?.functionResponse || null;
+};
+
+// 切换 functionCall 的展开/折叠状态
+const toggleFunctionCall = (functionCallId: string) => {
+  if (!functionCallId) return;
+  const next = new Set(expandedFunctionCalls.value);
+  if (next.has(functionCallId)) {
+    next.delete(functionCallId);
+  } else {
+    next.add(functionCallId);
+  }
+  expandedFunctionCalls.value = next;
+};
+
+// 检查 functionCall 是否展开
+const isFunctionCallExpanded = (functionCallId: string) => {
+  return expandedFunctionCalls.value.has(functionCallId);
+};
+
+// 获取 functionCall 的显示文本（优先显示查询内容或函数名）
+const getFunctionCallDisplayText = (functionCall: any) => {
+  const prefix = "查询";
+  if (!functionCall) return "";
+  // 优先显示查询内容
+  if (functionCall.args?.query) {
+    return prefix + functionCall.args.query;
+  }
+  // 其次显示 agent_name
+  if (functionCall.args?.agent_name) {
+    return prefix + functionCall.args.agent_name;
+  }
+  // 最后显示函数名
+  return "调用" + functionCall.name || "调用函数";
+};
+
+// 获取 functionResponse 的显示内容
+const getFunctionResponseDisplay = (functionResponse: any) => {
+  if (!functionResponse) return "";
+  // 如果有 response 对象，尝试提取有意义的内容
+  if (functionResponse.response) {
+    // 如果是字符串，直接返回
+    if (typeof functionResponse.response === "string") {
+      return functionResponse.response;
+    }
+    // 如果是对象，尝试提取常见字段
+    if (typeof functionResponse.response === "object") {
+      // 尝试提取 content、result、data 等常见字段
+      return (
+        functionResponse.response.content ||
+        functionResponse.response.result ||
+        functionResponse.response.data ||
+        JSON.stringify(functionResponse.response, null, 2)
+      );
+    }
+  }
+  // 如果没有 response，显示函数名
+  return functionResponse.name || "函数响应";
 };
 
 const setExpandedMessageKeys = (
@@ -422,11 +498,22 @@ onUnmounted(() => {
           :key="(item.eventId ?? 'user_') + index"
         >
           <div
-            v-if="!(item.text && item.text.startsWith('<backend-reply-start>'))"
+            v-if="
+              !(
+                (item.text && item.text.startsWith('<backend-reply-start>')) ||
+                item.functionResponse
+              )
+            "
             :ref="
               el => (el ? (messageRef[index] = el) : delete messageRef[index])
             "
-            :class="['message-box', { 'from-user': item.role === 'user' }]"
+            :class="[
+              'message-box',
+              {
+                'from-user': item.role === 'user',
+                'function-call-message': item.functionCall
+              }
+            ]"
             :data-event-id="item.eventId ?? ''"
           >
             <div class="mat-col AI-mat">
@@ -440,17 +527,15 @@ onUnmounted(() => {
                 'dark:text-white!',
                 {
                   'flex-width':
-                    item.functionCall ||
-                    item.functionResponse ||
-                    item.formConfig ||
-                    item.taskInfo,
-                  'is-btn-link': item.taskInfo || item.formConfig
+                    item.functionCall || item.formConfig || item.taskInfo,
+                  'is-btn-link': item.taskInfo || item.formConfig,
+                  'has-function-call': item.functionCall
                 }
               ]"
               @click="handleClickMessage(item, index)"
             >
               <div
-                v-if="user_info.user_id === 'zhanghaorui'"
+                v-if="user_info.user_id === 'zhanghaorui' && isDebugMode"
                 class="debugger-info"
                 style="
                   padding: 4px;
@@ -467,11 +552,85 @@ onUnmounted(() => {
                 formConfig.id: {{ item.formConfig?.id }} <br />
                 taskInfo.id: {{ item.taskInfo?.id }}
               </div>
-              <div v-if="item.functionCall">
-                {{ item.functionCall?.name }}
-              </div>
-              <div v-if="item.functionResponse">
-                {{ item.functionResponse?.name }}
+              <!-- functionCall 显示（包含 functionResponse） -->
+              <div
+                v-if="item.functionCall"
+                :class="[
+                  'function-call-wrapper',
+                  {
+                    loading: !hasFunctionResponse(item.functionCall.id),
+                    'has-response': hasFunctionResponse(item.functionCall.id),
+                    expanded: isFunctionCallExpanded(item.functionCall.id)
+                  }
+                ]"
+                @click="
+                  hasFunctionResponse(item.functionCall.id) &&
+                  toggleFunctionCall(item.functionCall.id)
+                "
+              >
+                <div class="function-call-content">
+                  <span class="function-call-icon">{{
+                    hasFunctionResponse(item.functionCall.id) ? "✓" : "🔍"
+                  }}</span>
+                  <span class="function-call-text">{{
+                    getFunctionCallDisplayText(item.functionCall)
+                  }}</span>
+                  <span
+                    v-if="!hasFunctionResponse(item.functionCall.id)"
+                    class="function-call-loading"
+                  >
+                    <span class="loading-dot" />
+                  </span>
+                  <span
+                    v-if="
+                      hasFunctionResponse(item.functionCall.id) &&
+                      !isFunctionCallExpanded(item.functionCall.id)
+                    "
+                    class="function-call-expand-hint"
+                  >
+                    ▼
+                  </span>
+                  <span
+                    v-if="
+                      hasFunctionResponse(item.functionCall.id) &&
+                      isFunctionCallExpanded(item.functionCall.id)
+                    "
+                    class="function-call-collapse-icon"
+                  >
+                    ▲
+                  </span>
+                </div>
+                <!-- functionResponse 内容（折叠在 functionCall 中） -->
+                <div
+                  v-if="
+                    hasFunctionResponse(item.functionCall.id) &&
+                    isFunctionCallExpanded(item.functionCall.id)
+                  "
+                  class="function-response-content"
+                >
+                  <div class="function-response-text">
+                    <pre
+                      v-if="
+                        typeof getFunctionResponseDisplay(
+                          getFunctionResponse(item.functionCall.id)
+                        ) === 'string'
+                      "
+                    >
+                      {{
+                        getFunctionResponseDisplay(
+                          getFunctionResponse(item.functionCall.id)
+                        )
+                      }}
+                    </pre>
+                    <div v-else>
+                      {{
+                        getFunctionResponseDisplay(
+                          getFunctionResponse(item.functionCall.id)
+                        )
+                      }}
+                    </div>
+                  </div>
+                </div>
               </div>
               <!-- <span style="white-space: pre-wrap">{{
                 item.content.parts[0].text
@@ -536,40 +695,6 @@ onUnmounted(() => {
           </div>
           <div class="mat-col user-mat" />
         </div>
-
-        <!-- <div :class="['message-box', { 'from-user': item.role === 'user' }]">
-          <template
-            v-if="
-              item.content.parts[0].text &&
-              !item.content.parts[0].text.startsWith('<backend-reply-start>')
-            "
-          >
-            <div class="mat-col AI-mat">
-              <el-button v-if="item.role !== 'user'">StAgent </el-button>
-            </div>
-            <div class="content-box">
-              <div v-if="item.content.parts[0].functionCall">
-                {{ item.content.parts[0].functionCall?.name }}
-              </div>
-              <div v-if="item.content.parts[0].functionResponse">
-                {{ item.content.parts[0].functionResponse?.name }}
-              </div>
-              <span
-                v-if="
-                  item.content.parts[0].text &&
-                  !item.content.parts[0].text.startsWith(
-                    '<backend-reply-start>'
-                  )
-                "
-                style="white-space: pre-wrap"
-                >{{ item.content.parts[0].text }}</span
-              >
-            </div>
-            <div class="mat-col user-mat">
-              <el-button v-if="item.role === 'user'">User </el-button>
-            </div>
-          </template>
-        </div> -->
       </div>
     </el-scrollbar>
   </div>
@@ -600,6 +725,20 @@ onUnmounted(() => {
 
           /* max-width: calc(100% - 176px); */
           max-width: calc(100% - 196px);
+        }
+      }
+
+      &.function-call-message {
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+
+        .mat-col {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 80px;
+          min-height: 24px;
         }
       }
 
@@ -637,6 +776,13 @@ onUnmounted(() => {
           /* 暂时用不到 */
           width: unset;
           max-width: calc(100% - 196px);
+        }
+
+        /* 当包含 functionCall 时，减少 padding 和去掉阴影 */
+        &.has-function-call {
+          padding: 0 8px;
+          background: transparent;
+          box-shadow: none;
         }
 
         &.is-btn-link {
@@ -688,6 +834,166 @@ onUnmounted(() => {
         .collapse-btn {
           align-self: flex-start;
           padding: 0;
+        }
+
+        /* functionCall 样式 - Cursor 风格，紧凑简洁 */
+        .function-call-wrapper {
+          display: flex;
+          flex-direction: column;
+          padding: 0;
+          margin: 2px 0;
+          background: transparent;
+          border: none;
+          border-radius: 0;
+          transition: all 0.2s ease;
+
+          &.has-response {
+            cursor: pointer;
+
+            &:hover {
+              .function-call-content {
+                background: var(--el-bg-color-page);
+              }
+
+              .function-call-expand-hint {
+                opacity: 1;
+              }
+            }
+          }
+
+          &.loading {
+            .function-call-text {
+              opacity: 0.7;
+            }
+          }
+
+          &.expanded {
+            .function-call-content {
+              background: var(--el-bg-color-page);
+            }
+          }
+
+          .function-call-content {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            width: 100%;
+            padding: 0 8px;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+          }
+
+          .function-call-icon {
+            flex-shrink: 0;
+            font-size: 12px;
+            line-height: 1;
+            opacity: 0.6;
+
+            .has-response & {
+              color: var(--el-color-success);
+              opacity: 0.8;
+            }
+          }
+
+          .function-call-text {
+            flex: 1;
+            font-size: 12px;
+            line-height: 1.4;
+            color: var(--el-text-color-regular);
+            word-break: break-word;
+          }
+
+          .function-call-loading {
+            position: relative;
+            display: inline-flex;
+            flex-shrink: 0;
+            align-items: center;
+            height: 4px;
+            margin-left: 4px;
+          }
+
+          .function-call-expand-hint {
+            margin-left: auto;
+            font-size: 8px;
+            color: var(--el-text-color-secondary);
+            white-space: nowrap;
+            opacity: 0.2;
+            transition: opacity 0.2s;
+          }
+
+          .function-call-collapse-icon {
+            margin-left: auto;
+            font-size: 8px;
+            line-height: 1;
+            color: var(--el-text-color-secondary);
+            opacity: 0.2;
+            transition: transform 0.2s;
+          }
+
+          .loading-dot {
+            position: relative;
+            display: inline-block;
+            width: 3px;
+            height: 3px;
+            background: var(--el-color-primary);
+            border-radius: 50%;
+            animation: function-call-pulse 1.4s ease-in-out infinite;
+
+            &::before,
+            &::after {
+              position: absolute;
+              top: 0;
+              left: 0;
+              display: inline-block;
+              width: 3px;
+              height: 3px;
+              content: "";
+              background: var(--el-color-primary);
+              border-radius: 50%;
+              animation: function-call-pulse 1.4s ease-in-out infinite;
+            }
+
+            &::before {
+              left: -6px;
+              animation-delay: -0.28s;
+            }
+
+            &::after {
+              left: 6px;
+              animation-delay: 0.28s;
+            }
+          }
+
+          /* functionResponse 内容样式（折叠在 functionCall 中） */
+          .function-response-content {
+            padding: 8px 12px;
+            padding-left: 20px;
+            margin-top: 6px;
+            background: var(--el-bg-color-page);
+            border-left: 2px solid var(--el-border-color-lighter);
+            border-radius: 0 4px 4px 0;
+            animation: slide-down 0.2s ease-out;
+          }
+
+          .function-response-text {
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--el-text-color-regular);
+            word-break: break-word;
+            white-space: pre-wrap;
+
+            pre {
+              padding: 0;
+              margin: 0;
+              font-family: inherit;
+              font-size: inherit;
+              line-height: inherit;
+              word-wrap: break-word;
+              white-space: pre-wrap;
+              background: transparent;
+              border: none;
+            }
+          }
         }
       }
 
@@ -807,6 +1113,33 @@ onUnmounted(() => {
       4px 0 0 #333,
       9px 0 0 #333,
       14px 0 0 #333;
+  }
+}
+
+@keyframes function-call-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    max-height: 1000px;
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -934,445 +1267,8 @@ onUnmounted(() => {
   margin-bottom: 16px;
 }
 
-/* .recommend {
-  width: 100%;
-}
-
-.recommend,
-.question {
-  .message-box {
-    padding: 16px;
-  }
-}
-.answer {
-  .message-box {
-    position: relative;
-    width: 100%;
-    padding: 16px 0;
-    margin-top: 22px;
-    .bot-name {
-      position: absolute;
-      line-height: 22px;
-      top: -26px;
-      color: #939cab;
-      white-space: nowrap;
-    }
-  }
-}
-
-.recommend,
-.question,
-.answer {
-  display: flex;
-
-  .message-box {
-    border-radius: 4px;
-    line-height: 1.5;
-    margin-left: 8px;
-
-    .answer-text {
-      padding: 0 16px;
-
-      :deep(& > *:first-child) {
-        margin-top: 0;
-      }
-
-      :deep(& > *:last-child) {
-        margin-bottom: 0;
-      }
-
-      :deep(p) {
-        margin: 8px 0;
-      }
-
-      :deep(pre) {
-        position: relative;
-        word-wrap: normal;
-        word-break: break-all;
-        white-space: pre-wrap;
-        overflow-x: auto;
-        margin-top: 0;
-        border-radius: 4px;
-      }
-
-      :deep(&.complete) {
-        .typing::after {
-          display: none;
-        }
-      }
-
-      :deep(ol > li) {
-        padding-left: 8px;
-      }
-
-      :deep(ol),
-      :deep(ul) {
-        padding-inline-start: 16px;
-        & > li::marker {
-          color: #bec4cd;
-        }
-      }
-    }
-
-    .answer-footer {
-      padding: 8px 16px 0;
-    }
-
-    &.max-width {
-      min-width: calc(100% - 48px);
-    }
-  }
-}
-
-.question {
-  margin-bottom: 16px;
-  .message-box {
-    background: var(--el-color-primary-p2);
-    border: 1px solid #ebedf0;
-    position: relative;
-    .question-copy {
-      position: absolute;
-      right: 16px;
-      bottom: 20px;
-    }
-
-    .filters {
-      color: #939cab;
-    }
-  }
-}
-.answer,
-.recommend {
-  .message-box {
-    background: rgba(243, 245, 247, 0.3);
-    border: 1px solid #ebedf0;
-
-    .answer-footer {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      color: #939cab;
-
-      .action-bar {
-        line-height: 16px;
-      }
-
-      .answer-pagination {
-        display: flex;
-        &.hidden {
-          z-index: -1;
-          opacity: 0;
-        }
-      }
-    }
-  }
-}
-
-.recommend {
-  .message-box {
-    width: calc(100% - 48px);
-    .title {
-      font-weight: bold;
-      font-size: 20px;
-    }
-
-    .recommend-question {
-      color: #939cab;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      height: 20px;
-      margin: 8px 0 4px;
-      .svg-icon {
-        margin-right: 4px;
-        color: #939cab;
-        cursor: auto;
-      }
-    }
-
-    .sub-title {
-      color: #939cab;
-      margin: 8px 0 0;
-    }
-    .question-container {
-      display: grid;
-      justify-content: space-between;
-      grid-template-columns: repeat(auto-fill, calc(50% - 4px));
-      .question-item {
-         background-repeat: no-repeat;
-        background-position: center;
-        background-size: cover;
-        height: 78px;
-        border-radius: 2px;
-        margin-top: 8px;
-        display: flex;
-        align-items: center;
-        cursor: not-allowed;
-
-        &-text {
-          height: 44px;
-          line-height: 22px;
-          overflow: hidden;
-          margin: 0 17px;
-        }
-      }
-    }
-  }
-}
-
-.message-box .svg-icon {
-  cursor: pointer;
-  color: #939cab;
-  &.active,
-  &:hover {
-    color: var(--el-color-primary);
-  }
-  &:not(:last-child) {
-    margin-right: 16px;
-  }
-  &:last-child {
-    margin-right: 0;
-  }
-  &.rotateX180 {
-    transform: rotateX(180deg);
-    -webkit-transform: rotateX(180deg);
-  }
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #ebedf0 0%, #bec4cd 100%);
-  border-radius: 50%;
-  font-size: 20px;
-  font-weight: bold;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-} */
-
 .message-scrollbar {
   flex: 1;
   margin-bottom: 8px;
-
-  /* .message-list-inner {
-    padding: 0 70px;
-  } */
 }
-
-/* .re-answer {
-  margin: 16px auto 0;
-
-  .svg-icon {
-    margin-right: 4px;
-  }
-}
-
-.bot-popper-content {
-  display: flex;
-  padding: 11px 5px;
-  .bot-img,
-  .bot-avatar {
-    height: 40px;
-    width: 40px;
-    border-radius: 4px;
-    margin-right: 16px;
-  }
-
-  .bot-avatar {
-    background: linear-gradient(135deg, #ebedf0 0%, #bec4cd 100%);
-    border-radius: 50%;
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .bot-des {
-    line-height: 1;
-    .name {
-      font-size: 16px;
-      margin-bottom: 10px;
-      font-weight: 500;
-    }
-    .msg {
-      color: #414855;
-      font-size: 14px;
-      font-weight: 400;
-    }
-  }
-}
-
-.bot-bubble-container {
-  height: 32px;
-  margin: 8px 70px 0;
-  width: fit-content;
-  position: relative;
-  .bot-bubble {
-    height: 24px;
-    line-height: 24px;
-    margin-bottom: 80px;
-    font-size: 12px;
-    width: fit-content;
-    border-radius: 120px;
-    border: none;
-    padding: 0 8px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--el-color-primary);
-    background: #effaf9;
-    display: flex;
-    align-items: center;
-
-    img,
-    .bot-avatar-small {
-      height: 12px;
-      width: 12px;
-      border-radius: 1px;
-      margin-right: 4px;
-    }
-
-    .bot-avatar-small {
-      background: linear-gradient(135deg, #ebedf0 0%, #bec4cd 100%);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      .svg-icon {
-        margin-left: 0;
-        &:hover {
-          color: #fff;
-        }
-      }
-    }
-    &::before {
-      position: absolute;
-      left: 50%;
-      top: 24px;
-      transform: translateX(-50%);
-      content: "";
-      border-width: 5px 5px 0;
-      border-style: solid;
-      border-color: #effaf9 transparent transparent; /* 粉 透明 透明
-      transition: var(--el-transition-all);
-    }
-  }
-}
-
-.reference {
-  margin-top: 20px;
-  min-width: 200px;
-  .header {
-    color: #939cab;
-    display: flex;
-    justify-content: space-between;
-    padding: 0 16px 4px;
-    .rotate-90 {
-      transform: rotate(-90deg);
-    }
-    .title .el-button.is-link {
-      font-size: 16px;
-      color: #939cab;
-      opacity: 1;
-      &:hover {
-        color: var(--el-color-primary);
-      }
-      .svg-icon {
-        margin-right: 4px;
-      }
-    }
-  }
-
-  &-item {
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    &:not(:last-child) {
-      border-bottom: 1px solid #ebedf0;
-    }
-
-    &:last-child {
-      margin-bottom: -16px;
-    }
-    .svg-icon {
-      opacity: 0;
-    }
-    .index {
-      color: #bec4cd;
-      margin-right: 14px;
-    }
-
-    &:hover {
-      color: var(--el-color-primary);
-      background: var(--el-color-primary-light-10);
-      .svg-icon {
-        opacity: 1;
-      }
-    }
-    a {
-      color: #232332;
-      text-decoration: none;
-      &:hover {
-        color: var(--el-color-primary);
-      }
-    }
-  }
-}
-
-.input-panel {
-  margin: 0 70px;
-  min-height: 98px;
-  height: fit-content;
-  border: 1px solid #ebedf0;
-  border-radius: 4px;
-  position: relative;
-  transition: var(--el-transition-all);
-
-  :deep(.el-textarea) {
-    margin-bottom: 40px;
-    --el-input-placeholder-color: #bec4cd;
-  }
-
-  .svg-icon {
-    margin-right: 4px;
-  }
-
-  &.focus {
-    border-color: var(--el-color-primary);
-  }
-
-  :deep(.el-textarea__inner) {
-    box-shadow: none;
-    padding: 16px 16px 0;
-  }
-  &-footer {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin: 16px;
-    background: transparent;
-
-    .action-bar {
-      display: flex;
-      &-item {
-        display: flex;
-        align-items: center;
-        color: var(--el-text-color-disabled);
-        cursor: not-allowed;
-        span {
-          @media (max-width: 780px) {
-            display: none;
-          }
-        }
-      }
-    }
-  }
-} */
 </style>
