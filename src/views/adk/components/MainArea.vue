@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import Chat from "./Chat.vue";
+import { ElMessageBox, ElMessage } from "element-plus";
 import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store/modules/adk.store";
 const adkStore = useADKChatStore();
-const { currentSession, messageList, eventData, isDebugMode } =
-  storeToRefs(adkStore);
+const {
+  currentSession,
+  messageList,
+  eventData,
+  isDebugMode,
+  user_info,
+  sessionList
+} = storeToRefs(adkStore);
 defineOptions({
   name: "ADK-Main"
 });
@@ -14,6 +21,44 @@ const handleClickAffixButton = () => {
   console.log("👻 当前messageList: ", messageList.value);
   console.log("👻 当前eventData: ", eventData.value);
   console.log("👻 当前adkStore: ", adkStore);
+};
+
+const handleDeleteSession = async () => {
+  console.log("👻 删除会话: ", currentSession.value);
+  const result = await ElMessageBox.confirm("确定要删除会话吗？", "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
+  });
+  console.log("👻 删除会话结果: ", result);
+  if (result === "confirm") {
+    try {
+      const index = sessionList.value.findIndex(
+        item => item.id === currentSession.value.id
+      );
+      let nextSession = null;
+      if (sessionList.value.length > 1) {
+        // 如果是最后一个，切换到上一个；否则切换到下一个
+        if (index === sessionList.value.length - 1) {
+          nextSession = sessionList.value[index - 1];
+        } else {
+          nextSession = sessionList.value[index + 1];
+        }
+      }
+
+      await adkStore.deleteSession(currentSession.value.id);
+
+      if (nextSession) {
+        await adkStore.setCurrentSession(nextSession.id);
+      } else {
+        // 如果没有剩余会话，创建一个新的
+        await adkStore.createNewSession();
+      }
+    } catch (error) {
+      console.log("👻 删除会话错误: ", error);
+    }
+  }
+  // await adkStore.deleteSession(currentSession.value.id);
 };
 </script>
 
@@ -25,7 +70,7 @@ const handleClickAffixButton = () => {
       <!-- <el-divider /> -->
       <!-- <div>End Session</div> -->
       <!-- <div>End Session</div> -->
-      <div>
+      <div v-if="user_info?.user_id === 'zhanghaorui'">
         <el-affix
           :offset="120"
           style="width: 32px; height: 32px"
@@ -40,6 +85,13 @@ const handleClickAffixButton = () => {
         >
           <el-switch v-model="isDebugMode" style="width: 32px; height: 32px" />
         </el-affix>
+      </div>
+      <div>
+        <el-button
+          style="width: 18px; height: 24px; padding: 4px"
+          @click="handleDeleteSession"
+          >🗑️</el-button
+        >
       </div>
     </div>
 

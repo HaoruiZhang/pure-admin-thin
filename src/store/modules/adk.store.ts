@@ -114,19 +114,31 @@ export const useADKChatStore = defineStore("adkChatStore", {
       }, 500);
     },
     async createNewSession() {
-      adkService.createSession(this.user_info.user_id).then((res: any) => {
-        this.currentSession = getNewSession(this.user_info.user_id);
-        this.currentSession.id = res.id;
-        this.sessionList.unshift(this.currentSession);
-        // this.getSessionList();
+      return adkService
+        .createSession(this.user_info.user_id)
+        .then((res: any) => {
+          this.currentSession = getNewSession(this.user_info.user_id);
+          this.currentSession.id = res.id;
+          this.sessionList.unshift(this.currentSession);
+          // this.getSessionList();
 
-        // this.updateSelectedSessionUrl();
-      });
+          // this.updateSelectedSessionUrl();
+        });
       // this.createSession();
       this.eventData.clear();
       this.eventMessageIndexArray = [];
       this.messageList = [];
       // this.artifacts = [];
+    },
+    async deleteSession(sessionId: string) {
+      return adkService
+        .deleteSession(this.user_info.user_id, sessionId)
+        .then((res: any) => {
+          console.log("▶️ 删除会话: ", res);
+          this.sessionList = this.sessionList.filter(
+            session => session.id !== sessionId
+          );
+        });
     },
     storeEvents(part: any, e: any, index: number) {
       let title = "";

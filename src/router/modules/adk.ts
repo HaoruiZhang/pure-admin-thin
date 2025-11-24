@@ -21,6 +21,24 @@ export default {
         title: $t("menus.pureADK"),
         showLink: true
       }
+    },
+    {
+      path: "/demo",
+      name: "DEMO",
+      component: () => import("@/views/demo/index.vue"),
+      meta: {
+        title: "Demo",
+        showLink: true
+      }
+    },
+    {
+      path: "/demo2",
+      name: "DEMO2",
+      component: () => import("@/views/demo2/index.vue"),
+      meta: {
+        title: "Demo2",
+        showLink: true
+      }
     }
   ]
 } satisfies RouteConfigsTable;

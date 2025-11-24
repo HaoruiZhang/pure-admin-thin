@@ -72,6 +72,12 @@ export const adkService = {
       null
     );
   },
+  deleteSession: (userId: string | number, sessionId: string) => {
+    return adkHttp.request(
+      "delete",
+      `/apps/agents/users/${userId}/sessions/${sessionId}`
+    );
+  },
 
   modifyEvent: (
     userId: string,
