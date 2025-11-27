@@ -30,15 +30,6 @@ export default {
         title: "Demo",
         showLink: true
       }
-    },
-    {
-      path: "/demo2",
-      name: "DEMO2",
-      component: () => import("@/views/demo2/index.vue"),
-      meta: {
-        title: "Demo2",
-        showLink: true
-      }
     }
   ]
 } satisfies RouteConfigsTable;
