@@ -39,6 +39,42 @@ export default {
         title: "Demo2",
         showLink: true
       }
+    },
+    {
+      path: "/demo3-sonnet",
+      name: "Demo3Sonnet",
+      component: () => import("@/views/demo3-sonnet/index.vue"),
+      meta: {
+        title: "Demo3-Sonnet",
+        showLink: true
+      }
+    },
+    {
+      path: "/demo4-opus",
+      name: "DEMO4",
+      component: () => import("@/views/demo4-opus/index.vue"),
+      meta: {
+        title: "Demo4",
+        showLink: true
+      }
+    },
+    {
+      path: "/demo2-gemini3pro",
+      name: "Demo2Gemini3Pro",
+      component: () => import("@/views/demo2-gemini3pro/index.vue"),
+      meta: {
+        title: "Demo2-Gemini3Pro",
+        showLink: true
+      }
+    },
+    {
+      path: "/demo5-auto",
+      name: "DEMO5",
+      component: () => import("@/views/demo5-auto/index.vue"),
+      meta: {
+        title: "Demo5-Auto",
+        showLink: true
+      }
     }
   ]
 } satisfies RouteConfigsTable;
