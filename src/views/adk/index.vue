@@ -6,6 +6,7 @@ import LeftSidePanel from "./components/LeftSidePanel.vue";
 import MainArea from "./components/MainArea.vue";
 import { useADKChatStore } from "@/store/modules/adk.store";
 import { adkService } from "@/api/adk.service";
+import { AccessiblePromise } from "@/views/adk/utils";
 const adkStore = useADKChatStore();
 const {
   sessionList,
@@ -15,7 +16,8 @@ const {
   user_info,
   eventData,
   operatingFormIndex,
-  userFormConfig
+  userFormConfig,
+  backendSessionList
 } = storeToRefs(adkStore);
 
 const emit = defineEmits(["getDetail"]);
@@ -25,7 +27,12 @@ defineOptions({
 function init() {
   // 增加监听message事件
   window.addEventListener("message", event => {
-    console.log("📢 收到了message事件: 【", event.data.key, "】", event.data);
+    console.log(
+      "📢 【iframe收到了message事件】 【",
+      event.data.key,
+      "】",
+      event.data
+    );
     switch (event.data.key) {
       case "startRunTask":
         adkStore.startSessionPolling();
@@ -80,6 +87,17 @@ function init() {
             }
           });
         break;
+      case "updateSessionList":
+        const remoteSessions = event.data.sessions;
+        backendSessionList.value = remoteSessions;
+        // 重置 getListReady，确保等待新的数据获取完成
+        adkStore.getListReady = new AccessiblePromise<void>();
+        adkStore.getSessionList();
+        adkStore.getListReady.then(async () => {
+          // filterSessionListFromBackend 已在 getSessionList 内部调用，无需重复
+          await handleSessionAfterFilter();
+        });
+        break;
       default:
         break;
     }
@@ -101,14 +119,39 @@ function parseUrlParams() {
 async function bootstrapSession() {
   const { userId, sessionId } = parseUrlParams();
   userId && adkStore.setUserId(userId);
-  const initSessionId = sessionId ?? (await ensureSessionList());
+  const initSessionId =
+    sessionId &&
+    backendSessionList.value.find(session => session.session === sessionId)
+      ? sessionId
+      : await ensureSessionList();
   await adkStore.setCurrentSession(initSessionId);
+}
+
+async function handleSessionAfterFilter() {
+  const { sessionId } = parseUrlParams();
+  const filteredList = sessionList.value;
+
+  // 筛选后列表为空，创建新 session
+  if (!filteredList.length) {
+    await adkStore.createNewSession();
+    return;
+  }
+
+  // URL 中指定的 sessionId 在筛选后的列表中，直接渲染
+  if (sessionId && filteredList.some(session => session.id === sessionId)) {
+    await adkStore.setCurrentSession(sessionId);
+    return;
+  }
+
+  // 否则切换为筛选后列表的第一个
+  await adkStore.setCurrentSession(filteredList[0].id);
 }
 
 async function ensureSessionList() {
   if (!sessionList.value.length) {
     await adkStore.getSessionList();
-    await adkStore.getListReady;
+    // await adkStore.getListReady;
+    // adkStore.filterSessionListFromBackend();
   }
   return sessionList.value[0]?.id;
 }
@@ -116,9 +159,15 @@ async function ensureSessionList() {
 onMounted(async () => {
   console.log("⬇️⬇️⬇️⬇️⬇️⬇️ 挂载了ADK组件 ⬇️⬇️⬇️⬇️⬇️⬇️");
   init();
-  await adkStore.getSessionList();
-  await adkStore.getListReady;
-  await bootstrapSession();
+  window.parent.postMessage(
+    {
+      key: "adkReady"
+    },
+    "*"
+  );
+  // await adkStore.getSessionList();
+  // await adkStore.getListReady;
+  // await bootstrapSession();
   await nextTick();
   adkStore.scrollToBottomSmooth();
 });

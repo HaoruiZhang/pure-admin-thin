@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, nextTick } from "vue";
+import { onMounted, ref, nextTick, computed } from "vue";
 
 import NewSession from "@/assets/svg/new_session.svg";
 import { getSessionListByDays } from "../utils";

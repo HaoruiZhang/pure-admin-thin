@@ -30,6 +30,7 @@ interface adkChatState {
   isUserNewMessage: boolean;
   currentSession: AdkSession;
   sessionList: AdkSession[];
+  backendSessionList: any[];
   sendLoading: boolean; //发送消息的loading状态
   latestThought: string;
   scrollContainer: any;
@@ -74,6 +75,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     isDebugMode: false,
     operatingFormIndex: 0,
     sessionList: [],
+    backendSessionList: [],
     messageList: [],
     userFormConfig: null,
     isFinalResponse: true,
@@ -120,15 +122,20 @@ export const useADKChatStore = defineStore("adkChatStore", {
           this.currentSession = getNewSession(this.user_info.user_id);
           this.currentSession.id = res.id;
           this.sessionList.unshift(this.currentSession);
-          // this.getSessionList();
-
+          this.eventData.clear();
+          this.eventMessageIndexArray = [];
+          this.messageList = [];
           // this.updateSelectedSessionUrl();
+          this.postMessageToParent({
+            key: "sessionCreated",
+            sessionId: this.currentSession.id
+          });
         });
       // this.createSession();
-      this.eventData.clear();
-      this.eventMessageIndexArray = [];
-      this.messageList = [];
       // this.artifacts = [];
+    },
+    postMessageToParent(message: any) {
+      window.parent.postMessage(message, "*");
     },
     async deleteSession(sessionId: string) {
       return adkService
@@ -138,6 +145,10 @@ export const useADKChatStore = defineStore("adkChatStore", {
           this.sessionList = this.sessionList.filter(
             session => session.id !== sessionId
           );
+          this.postMessageToParent({
+            key: "sessionDeleted",
+            sessionId: this.currentSession.id
+          });
         });
     },
     storeEvents(part: any, e: any, index: number) {
@@ -199,9 +210,18 @@ export const useADKChatStore = defineStore("adkChatStore", {
             return b?.lastUpdateTime - a?.lastUpdateTime;
           });
           this.sessionList = sortedRes;
+          this.filterSessionListFromBackend();
         }
         this.getListReady.resolve();
       });
+    },
+    filterSessionListFromBackend() {
+      const backendSessionIdList = this.backendSessionList.map(
+        session => session.session
+      );
+      this.sessionList = this.sessionList.filter(session =>
+        backendSessionIdList.includes(session.id)
+      );
     },
     async setCurrentSession(newSessionId: number | string) {
       // if (newSessionId === this.currentSession.id) {
