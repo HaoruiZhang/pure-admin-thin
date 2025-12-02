@@ -17,7 +17,8 @@ const {
   eventData,
   operatingFormIndex,
   userFormConfig,
-  backendSessionList
+  backendSessionList,
+  needToFilterSessionList
 } = storeToRefs(adkStore);
 
 const emit = defineEmits(["getDetail"]);
@@ -88,6 +89,7 @@ function init() {
           });
         break;
       case "updateSessionList":
+        needToFilterSessionList.value = true;
         const remoteSessions = event.data.sessions;
         backendSessionList.value = remoteSessions;
         // 重置 getListReady，确保等待新的数据获取完成
@@ -165,9 +167,11 @@ onMounted(async () => {
     },
     "*"
   );
-  // await adkStore.getSessionList();
-  // await adkStore.getListReady;
-  // await bootstrapSession();
+  adkStore.getSessionList();
+  adkStore.getListReady.then(async () => {
+    // filterSessionListFromBackend 已在 getSessionList 内部调用，无需重复
+    await handleSessionAfterFilter();
+  });
   await nextTick();
   adkStore.scrollToBottomSmooth();
 });

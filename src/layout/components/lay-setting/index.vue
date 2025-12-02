@@ -25,24 +25,16 @@ import RightArrow from "~icons/ri/arrow-right-s-line?width=20&height=20";
 import DayIcon from "@/assets/svg/day.svg?component";
 import DarkIcon from "@/assets/svg/dark.svg?component";
 import SystemIcon from "@/assets/svg/system.svg?component";
-const { VITE_SHOW_MORE_SETTING } = import.meta.env;
 
 const { t } = useI18n();
 const { device } = useNav();
 const { isDark } = useDark();
 const { $storage } = useGlobal<GlobalPropertiesApi>();
-
+const showMoreConfig = ref(false);
 const mixRef = ref();
 const verticalRef = ref();
 const horizontalRef = ref();
-const showMoreConfig = ref(VITE_SHOW_MORE_SETTING || false);
 
-console.log(
-  "VITE_SHOW_MORE_SETTING",
-  VITE_SHOW_MORE_SETTING,
-  showMoreConfig.value,
-  Boolean(VITE_SHOW_MORE_SETTING.value)
-);
 const {
   dataTheme,
   overallStyle,

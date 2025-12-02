@@ -57,6 +57,7 @@ interface adkChatState {
   lastSessionSyncTime?: number;
   operatingFormIndex?: number;
   isDebugMode: boolean;
+  needToFilterSessionList: boolean;
 }
 
 export const useADKChatStore = defineStore("adkChatStore", {
@@ -75,6 +76,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     isDebugMode: false,
     operatingFormIndex: 0,
     sessionList: [],
+    needToFilterSessionList: false,
     backendSessionList: [],
     messageList: [],
     userFormConfig: null,
@@ -210,7 +212,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             return b?.lastUpdateTime - a?.lastUpdateTime;
           });
           this.sessionList = sortedRes;
-          this.filterSessionListFromBackend();
+          this.needToFilterSessionList && this.filterSessionListFromBackend();
         }
         this.getListReady.resolve();
       });
