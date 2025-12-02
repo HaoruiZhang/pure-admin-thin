@@ -26,6 +26,15 @@ defineOptions({
   name: "ADK"
 });
 function init() {
+  const { userId } = parseUrlParams();
+  userId && adkStore.setUserId(userId);
+  adkStore.getSessionList();
+  adkStore.getListReady.then(async () => {
+    // filterSessionListFromBackend 已在 getSessionList 内部调用，无需重复
+    await handleSessionAfterFilter();
+  });
+}
+function bindEventHandlers() {
   // 增加监听message事件
   window.addEventListener("message", event => {
     console.log(
@@ -161,18 +170,14 @@ async function ensureSessionList() {
 onMounted(async () => {
   console.log("⬇️⬇️⬇️⬇️⬇️⬇️ 挂载了ADK组件 ⬇️⬇️⬇️⬇️⬇️⬇️");
   init();
+  bindEventHandlers();
+  await nextTick();
   window.parent.postMessage(
     {
       key: "adkReady"
     },
     "*"
   );
-  adkStore.getSessionList();
-  adkStore.getListReady.then(async () => {
-    // filterSessionListFromBackend 已在 getSessionList 内部调用，无需重复
-    await handleSessionAfterFilter();
-  });
-  await nextTick();
   adkStore.scrollToBottomSmooth();
 });
 </script>
