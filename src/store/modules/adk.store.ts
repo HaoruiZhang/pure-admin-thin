@@ -672,16 +672,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
               },
               "*"
             );
-          console.log("📦 手动处理最后一条消息发送_isFinalResponse");
-          window.parent.postMessage(
-            {
-              key: "isFinalResponse",
-              type: "_isFinalResponse",
-              sessionId: this.currentSession.id,
-              value: true
-            },
-            "*"
-          );
           this.insertMessageBeforeLoadingMessage([
             lastMessage,
             {
@@ -769,6 +759,15 @@ export const useADKChatStore = defineStore("adkChatStore", {
             this.currentSession = sessionDetail;
             this.lastSessionSyncTime = sessionDetail.lastUpdateTime;
           }
+          window.parent.postMessage(
+            {
+              key: "isFinalResponse",
+              type: "_isFinalResponse",
+              sessionId: this.currentSession.id,
+              value: true
+            },
+            "*"
+          );
         }
       );
       this.userInput = "";

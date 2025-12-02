@@ -127,16 +127,16 @@ function parseUrlParams() {
   };
 }
 
-async function bootstrapSession() {
-  const { userId, sessionId } = parseUrlParams();
-  userId && adkStore.setUserId(userId);
-  const initSessionId =
-    sessionId &&
-    backendSessionList.value.find(session => session.session === sessionId)
-      ? sessionId
-      : await ensureSessionList();
-  await adkStore.setCurrentSession(initSessionId);
-}
+// async function bootstrapSession() {
+//   const { userId, sessionId } = parseUrlParams();
+//   userId && adkStore.setUserId(userId);
+//   const initSessionId =
+//     sessionId &&
+//     backendSessionList.value.find(session => session.session === sessionId)
+//       ? sessionId
+//       : await ensureSessionList();
+//   await adkStore.setCurrentSession(initSessionId);
+// }
 
 async function handleSessionAfterFilter() {
   const { sessionId } = parseUrlParams();

@@ -70,7 +70,7 @@ const handleDeleteSession = async () => {
       <!-- <el-divider /> -->
       <!-- <div>End Session</div> -->
       <!-- <div>End Session</div> -->
-      <div v-if="user_info?.user_id === 'zhanghaorui'">
+      <div v-if="['zhanghaorui', 'user'].includes(user_info.user_id)">
         <el-affix
           :offset="120"
           style="width: 32px; height: 32px"

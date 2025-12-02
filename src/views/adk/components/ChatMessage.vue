@@ -20,6 +20,8 @@ defineOptions({
 });
 
 // refs
+const showPreview = ref(false);
+const srcList = ref<string[]>([]);
 const messageRef = ref<any[]>([]);
 // const messageList = ref<EventItem[]>([...sessionRes.events]);
 
@@ -416,7 +418,7 @@ const onScroll = ({ scrollTop }: { scrollTop: number }) => {
 
 const handleClickMessage = (message: any, index: number) => {
   console.log("👻 点击消息: ", message);
-  if (!message.taskInfo && !message.formConfig) return;
+  // if (!message.taskInfo && !message.formConfig) return;
   if (message.taskInfo) {
     window.parent.postMessage(
       {
@@ -440,6 +442,9 @@ const handleClickMessage = (message: any, index: number) => {
       },
       "*"
     );
+  } else if (message.inlineData) {
+    showPreview.value = true;
+    srcList.value = [message.inlineData.data];
   }
 };
 
@@ -485,6 +490,13 @@ onUnmounted(() => {
 
 <template>
   <div class="chat-message">
+    <el-image-viewer
+      v-if="showPreview"
+      :url-list="srcList"
+      show-progress
+      :initial-index="0"
+      @close="showPreview = false"
+    />
     <el-scrollbar
       ref="scrollRef"
       :class="['message-scrollbar', { 'show-stop': sendLoading }]"
@@ -534,8 +546,12 @@ onUnmounted(() => {
               ]"
               @click="handleClickMessage(item, index)"
             >
+              <!-- 调试信息 只展示给zhanghaorui和user -->
               <div
-                v-if="user_info.user_id === 'zhanghaorui' && isDebugMode"
+                v-if="
+                  ['zhanghaorui', 'user'].includes(user_info.user_id) &&
+                  isDebugMode
+                "
                 class="debugger-info"
                 style="
                   padding: 4px;
@@ -635,6 +651,7 @@ onUnmounted(() => {
               <!-- <span style="white-space: pre-wrap">{{
                 item.content.parts[0].text
               }}</span> -->
+              <!-- 消息内容 -->
               <div
                 v-if="item.text && !item.formConfig && !item.taskInfo"
                 class="message-content"
@@ -670,7 +687,27 @@ onUnmounted(() => {
                   {{ isMessageCollapsed(item, index) ? "展开全部" : "收起" }}
                 </el-button>
               </div>
+
+              <div
+                v-if="item.inlineData && !item.formConfig && !item.taskInfo"
+                class="message-content"
+              >
+                <div
+                  v-if="item.inlineData.mimeType.startsWith('image/png')"
+                  class="inline-data-content"
+                >
+                  <img :src="item.inlineData.data" />
+                </div>
+                <div v-else class="attachment">
+                  <a :href="item.inlineData.data" download>{{
+                    item.inlineData.displayName || item.inlineData.data
+                  }}</a>
+                </div>
+              </div>
+
+              <!-- 表单配置 -->
               <div v-if="item.formConfig">Check form config</div>
+              <!-- 任务信息 -->
               <div v-if="item.taskInfo">View task info</div>
             </div>
             <div class="mat-col user-mat">
@@ -801,6 +838,10 @@ onUnmounted(() => {
           display: flex;
           flex-direction: column;
           gap: 8px;
+
+          .inline-data-content:hover {
+            cursor: pointer;
+          }
         }
 
         .message-html {
