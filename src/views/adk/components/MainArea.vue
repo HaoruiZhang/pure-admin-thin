@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import Chat from "./Chat.vue";
-import { ElMessageBox, ElMessage } from "element-plus";
+import TaskBoard from "./TaskBoard.vue";
+import { ElMessageBox, ElMessage, ElIcon } from "element-plus";
+import { Delete, Tickets } from "@element-plus/icons-vue";
 import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store/modules/adk.store";
+import { ref } from "vue";
+
 const adkStore = useADKChatStore();
 const {
   currentSession,
@@ -12,6 +16,9 @@ const {
   user_info,
   sessionList
 } = storeToRefs(adkStore);
+
+const showTaskBoard = ref(false);
+
 defineOptions({
   name: "ADK-Main"
 });
@@ -86,16 +93,18 @@ const handleDeleteSession = async () => {
           <el-switch v-model="isDebugMode" style="width: 32px; height: 32px" />
         </el-affix>
       </div>
-      <div>
-        <el-button
-          style="width: 18px; height: 24px; padding: 4px"
-          @click="handleDeleteSession"
-          >🗑️</el-button
-        >
+      <div class="action-buttons">
+        <el-button link title="任务看板" @click="showTaskBoard = true">
+          <el-icon :size="20"><Tickets /></el-icon>
+        </el-button>
+        <el-button link title="删除会话" @click="handleDeleteSession">
+          <el-icon :size="20"><Delete /></el-icon>
+        </el-button>
       </div>
     </div>
 
     <Chat />
+    <TaskBoard v-model="showTaskBoard" />
   </div>
 </template>
 <style scoped>
@@ -127,6 +136,15 @@ const handleDeleteSession = async () => {
     /* color: #25282c; */
 
     /* background-color: #ffffff; */
+
+    .action-buttons {
+      display: flex;
+      align-items: center;
+
+      .el-button {
+        padding: 4px;
+      }
+    }
   }
 
   .chat-area {

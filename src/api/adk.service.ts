@@ -1,4 +1,4 @@
-import { adkHttp } from "@/utils/http";
+import { adkHttp, agentHttp } from "@/utils/http";
 import type { AgentRunRequest } from "@/types";
 import { ref } from "vue";
 
@@ -214,4 +214,48 @@ export const adkService = {
       isLoading
     };
   }
+};
+export const backendService = {
+  getTaskList: (data: {
+    session: string;
+    tagname?: string;
+    token?: string;
+  }) => {
+    return agentHttp.request("post", `ssh/task-list`, { data });
+  }
+
+  // getTaskDetail: (userId: string | number, taskId: number | string) => {
+  //   return agentHttp.get(`apps/agents/users/${userId}/tasks/${taskId}`);
+  // },
+  // createTask: (userId: string | number) => {
+  //   return agentHttp.request(
+  //     "post",
+  //     `/apps/agents/users/${userId}/tasks`,
+  //     null
+  //   );
+  // },
+  // deleteTask: (userId: string | number, taskId: string) => {
+  //   return agentHttp.request(
+  //     "delete",
+  //     `/apps/agents/users/${userId}/tasks/${taskId}`
+  //   );
+  // },
+  // updateTask: (userId: string | number, taskId: string, form: any) => {
+  //   return agentHttp.request(
+  //     "put",
+  //     `/apps/agents/users/${userId}/tasks/${taskId}`,
+  //     {
+  //       data: {
+  //         modified_content: {
+  //           role: "model",
+  //           parts: [
+  //             {
+  //               text: form
+  //             }
+  //           ]
+  //         }
+  //       }
+  //     }
+  //   );
+  // }
 };

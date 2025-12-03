@@ -58,11 +58,13 @@ interface adkChatState {
   operatingFormIndex?: number;
   isDebugMode: boolean;
   needToFilterSessionList: boolean;
+  token: string;
 }
 
 export const useADKChatStore = defineStore("adkChatStore", {
   state: (): adkChatState => ({
     sseController: null,
+    token: "",
     latestThought: "",
     userInput: "",
     streamingTextMessage: null,
@@ -101,6 +103,13 @@ export const useADKChatStore = defineStore("adkChatStore", {
     setUserId(userId: string) {
       this.user_info.user_id = userId;
       localStorage?.setItem("stag:user_id", userId);
+    },
+    setToken(token: string) {
+      this.token = token;
+      localStorage?.setItem("stag:token", token);
+    },
+    getToken() {
+      return this.token;
     },
     registerScrollRef(r: any) {
       this.scrollRef = r;
@@ -476,10 +485,11 @@ export const useADKChatStore = defineStore("adkChatStore", {
               { ...message, formConfig: { name: "Analysis Form" } }
             ]);
           }
-        } else if (part.text.includes("# <must_execute>")) {
-          const scriptContent = extractScriptContent(part.text);
-          if (scriptContent) {
-            // console.log('---- 脚本内容: ', scriptContent);
+        } else if (part.text.includes("```")) {
+          const extracted = extractScriptContent(part.text);
+          if (extracted) {
+            const { language, content } = extracted;
+            // console.log('---- 脚本内容: ', content);
             // console.log('---- this.sessionId: ', this.sessionId, window.sessionStorage.getItem('sessionId'));
             this.isUserNewMessage &&
               window.parent.postMessage(
@@ -487,8 +497,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
                 {
                   key: "mustExecuteScript",
                   type: "mustExecuteScript",
-                  script: "```" + scriptContent + "\n\n```",
-                  eventId: message.eventId
+                  script: content,
+                  eventId: message.eventId,
+                  subtype: `code/${language.toLowerCase()}`
                 },
                 "*"
               );
@@ -657,17 +668,19 @@ export const useADKChatStore = defineStore("adkChatStore", {
             { ...lastMessage, formConfig: { name: "Analysis Form" } }
           ]);
         }
-      } else if (lastMessage.text.includes("# <must_execute>")) {
-        const scriptContent = extractScriptContent(lastMessage.text);
-        if (scriptContent) {
-          // console.log('---- 脚本内容: ', scriptContent);
+      } else if (lastMessage.text.includes("```")) {
+        const extracted = extractScriptContent(lastMessage.text);
+        if (extracted) {
+          const { language, content } = extracted;
+          // console.log('---- 脚本内容: ', content);
           this.isUserNewMessage &&
             window.parent.postMessage(
               // 新对话的才自动执行
               {
                 key: "mustExecuteScript",
                 type: "mustExecuteScript",
-                script: "```" + scriptContent + "\n\n```",
+                script: content,
+                subtype: `code/${language.toLowerCase()}`,
                 eventId: localStorage.getItem("finalEventId")!
               },
               "*"

@@ -26,8 +26,9 @@ defineOptions({
   name: "ADK"
 });
 function init() {
-  const { userId } = parseUrlParams();
+  const { userId, token } = parseUrlParams();
   userId && adkStore.setUserId(userId);
+  token && adkStore.setToken(token);
   adkStore.getSessionList();
   adkStore.getListReady.then(async () => {
     // filterSessionListFromBackend 已在 getSessionList 内部调用，无需重复
@@ -116,14 +117,19 @@ function bindEventHandlers() {
 }
 function parseUrlParams() {
   let searchParams = new URLSearchParams(window.location.search);
-  if (!searchParams.has("userId") && !searchParams.has("session")) {
+  if (
+    !searchParams.has("userId") &&
+    !searchParams.has("session") &&
+    !searchParams.has("token")
+  ) {
     const hash = window.location.hash || "";
     const hashQuery = hash.includes("?") ? hash.split("?")[1] : "";
     searchParams = new URLSearchParams(hashQuery);
   }
   return {
     userId: searchParams.get("userId"),
-    sessionId: searchParams.get("session")
+    sessionId: searchParams.get("session"),
+    token: searchParams.get("token")
   };
 }
 

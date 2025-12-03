@@ -424,7 +424,7 @@ const handleClickMessage = (message: any, index: number) => {
       {
         key: "showTaskInfo",
         type: "showTaskInfo",
-        eventId: message.eventId,
+        taskId: "e-" + message.eventId,
         sessionId: currentSession.value.id
       },
       "*"

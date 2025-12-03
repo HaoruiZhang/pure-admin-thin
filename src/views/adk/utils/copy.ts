@@ -45,12 +45,26 @@ export const onRunDom = (node: any) => {
   const adkStore = useADKChatStore();
   const { currentSession } = storeToRefs(adkStore);
   const eventId = getParentEventId(node);
+
+  let subtype = "";
+  if (typeof node !== "string" && node?.querySelector) {
+    const codeNode = node.querySelector("code");
+    if (codeNode) {
+      const classes = Array.from(codeNode.classList);
+      const langClass = classes.find((cls: any) => cls.startsWith("language-"));
+      if (langClass) {
+        subtype = `code/${(langClass as string).replace("language-", "").toLowerCase()}`;
+      }
+    }
+  }
+
   console.log("获取的代码内容\n", content, "\neventId\n", eventId);
   window.parent.postMessage(
     {
       key: "workflowContent",
       type: "workflowContent",
       text: content,
+      subtype: subtype || undefined,
       session:
         currentSession.value.id ?? window.sessionStorage.getItem("sessionId"),
       eventId: eventId

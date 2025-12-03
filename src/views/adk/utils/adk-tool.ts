@@ -145,11 +145,21 @@ export function extractScriptContent(str: string) {
   const startTag = "```";
   const endTag = "\n```";
   const startIndex = str.indexOf(startTag);
-  if (startIndex === -1) return ""; // 未找到开始标记
+  if (startIndex === -1) return null; // 未找到开始标记
   const contentStartIndex = startIndex + startTag.length;
   const endIndex = str.indexOf(endTag, contentStartIndex);
-  if (endIndex === -1) return ""; // 未找到结束标记
-  return str.substring(contentStartIndex, endIndex);
+  if (endIndex === -1) return null; // 未找到结束标记
+
+  const rawContent = str.substring(contentStartIndex, endIndex);
+  const firstNewLineIndex = rawContent.indexOf("\n");
+
+  if (firstNewLineIndex !== -1) {
+    const language = rawContent.substring(0, firstNewLineIndex).trim();
+    const content = rawContent.substring(firstNewLineIndex + 1);
+    return { language, content };
+  }
+
+  return { language: "", content: rawContent };
 }
 
 export function extractFormConfigs(str: string) {
