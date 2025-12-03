@@ -399,7 +399,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
       e: any,
       index: number,
       role: string,
-      needRefresh = true,
       invocationIndex?: number,
       additionalIndeces?: any
     ) {
@@ -414,6 +413,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           }
         }
       }
+      this.checkFinalResponse(part, e ? e : null);
 
       const message: any = {
         role,
@@ -596,9 +596,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         }
       }
 
-      this.checkFinalResponse(part, e ? e : null);
-
-      if (needRefresh && Object.keys(part).length > 0) {
+      if (Object.keys(part).length > 0) {
         this.insertMessageBeforeLoadingMessage(message);
       }
     },

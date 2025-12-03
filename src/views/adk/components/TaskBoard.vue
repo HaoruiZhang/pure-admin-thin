@@ -19,7 +19,8 @@ import {
   Warning,
   Loading,
   Document,
-  Cpu
+  Cpu,
+  Monitor
 } from "@element-plus/icons-vue";
 
 const props = defineProps({
@@ -142,6 +143,11 @@ const formatContent = (content: string) => {
   return content.length > 100 ? content.slice(0, 100) + "..." : content;
 };
 
+const formatDate = (timestamp?: number) => {
+  if (!timestamp) return "-";
+  return new Date(timestamp).toLocaleString();
+};
+
 const viewTaskInfo = (task: TaskItem) => {
   window.parent.postMessage(
     {
@@ -163,6 +169,7 @@ const viewTaskInfo = (task: TaskItem) => {
     size="520px"
     class="task-board-drawer"
     resizable
+    :modal="false"
   >
     <div class="task-board-container">
       <div class="header-info">
@@ -219,14 +226,44 @@ const viewTaskInfo = (task: TaskItem) => {
                         class="task-info-btn"
                         @click.stop="viewTaskInfo(task)"
                       >
-                        View Task Info
+                        <el-icon style="margin-right: 4px"
+                          ><Monitor />
+                        </el-icon>
+                        远程查看
                       </el-button>
-                      <span>查看详情</span>
+                      <span>任务信息</span>
                     </div>
                   </template>
-                  <pre class="code-block">{{
-                    task.type === "function" ? task.content : task.content
-                  }}</pre>
+                  <div class="task-details">
+                    <div class="detail-item">
+                      <span class="label">Task ID:</span>
+                      <span class="value">{{ task.id }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="label">创建时间:</span>
+                      <span class="value">{{
+                        formatDate(task.timestamp)
+                      }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="label">更新时间:</span>
+                      <span class="value">{{
+                        task.details.updated_at || "-"
+                      }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="label">创建人:</span>
+                      <span class="value">{{
+                        task.details.creator || "-"
+                      }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="label">Tag Name:</span>
+                      <span class="value">{{
+                        task.details.tagname || "-"
+                      }}</span>
+                    </div>
+                  </div>
                 </el-collapse-item>
               </el-collapse>
             </div>
@@ -366,5 +403,34 @@ const viewTaskInfo = (task: TaskItem) => {
   white-space: pre-wrap;
   background: #f4f4f5;
   border-radius: 4px;
+}
+
+.task-details {
+  padding: 8px;
+  background-color: #f9fafc;
+  border-radius: 4px;
+
+  .detail-item {
+    display: flex;
+    margin-bottom: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .label {
+      flex-shrink: 0;
+      width: 70px;
+      color: #909399;
+    }
+
+    .value {
+      flex: 1;
+      color: #606266;
+      word-break: break-all;
+    }
+  }
 }
 </style>
