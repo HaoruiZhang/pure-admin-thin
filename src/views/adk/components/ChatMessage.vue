@@ -28,9 +28,6 @@ const messageRef = ref<any[]>([]);
 const scrollRef = ref<any>(null);
 const messageInnerRef = ref<HTMLElement | null>(null);
 
-const isProgrammaticScroll = ref(true); // 判断是否代码控制滚动
-const autoScrollDownDisabled = ref(false); // 为true时，禁止自动滚动
-
 const COLLAPSE_THRESHOLD = 4000; // 字符阈值，超过则折叠
 const COLLAPSE_PREVIEW_LENGTH = 1200; // 预览长度
 
@@ -400,19 +397,18 @@ const getFullContentHtml = (item: any, index: number) => {
 };
 
 const onScroll = ({ scrollTop }: { scrollTop: number }) => {
-  if (isProgrammaticScroll.value) {
-    // 延迟重置，避免事件同步问题
-    autoScrollDownDisabled.value = false;
-    setTimeout(() => {
-      isProgrammaticScroll.value = false;
-    }, 0);
+  if (adkStore.isProgrammaticScroll) {
+    // 程序控制的滚动，重置自动滚动禁用状态
+    adkStore.setAutoScrollDownDisabled(false);
   } else {
+    // 用户手动滚动
     if (sendLoading.value) return;
     const wrapEl = scrollRef.value?.wrapRef;
     if (!wrapEl || !messageInnerRef.value) return;
     const isAtBottom =
       wrapEl.scrollTop + wrapEl.clientHeight >= wrapEl.scrollHeight - 40; // 40px的容差
-    autoScrollDownDisabled.value = !isAtBottom;
+    // 当用户不在底部时，禁止自动滚动
+    adkStore.setAutoScrollDownDisabled(!isAtBottom);
   }
 };
 
@@ -501,8 +497,8 @@ onUnmounted(() => {
       ref="scrollRef"
       :class="['message-scrollbar', { 'show-stop': sendLoading }]"
       @scroll="onScroll"
-      @mouseenter="autoScrollDownDisabled = true"
-      @mouseleave="autoScrollDownDisabled = false"
+      @mouseenter="adkStore.setAutoScrollDownDisabled(true)"
+      @mouseleave="adkStore.setAutoScrollDownDisabled(false)"
     >
       <div ref="messageInnerRef" class="message-list-inner">
         <template

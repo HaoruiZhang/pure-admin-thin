@@ -59,6 +59,8 @@ interface adkChatState {
   isDebugMode: boolean;
   needToFilterSessionList: boolean;
   token: string;
+  autoScrollDownDisabled: boolean; // 为true时，禁止自动滚动
+  isProgrammaticScroll: boolean; // 判断是否代码控制滚动
 }
 
 export const useADKChatStore = defineStore("adkChatStore", {
@@ -95,7 +97,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
     getListReady: new AccessiblePromise<void>(),
     setCurrentSessionReady: new AccessiblePromise<void>(),
     sessionPolling: undefined,
-    lastSessionSyncTime: 0
+    lastSessionSyncTime: 0,
+    autoScrollDownDisabled: false, // 为true时，禁止自动滚动
+    isProgrammaticScroll: true // 判断是否代码控制滚动
   }),
   getters: {},
   actions: {
@@ -192,6 +196,11 @@ export const useADKChatStore = defineStore("adkChatStore", {
     },
 
     async scrollToBottomSmooth() {
+      // 如果用户正在滚动查看历史消息，不执行自动滚动
+      if (this.autoScrollDownDisabled) return;
+
+      // 标记这是程序控制的滚动
+      this.isProgrammaticScroll = true;
       await nextTick();
       const el = this.scrollRef?.wrapRef ?? this.scrollRef;
 
@@ -205,6 +214,13 @@ export const useADKChatStore = defineStore("adkChatStore", {
         // 兜底：直接设置 scrollTop
         el.scrollTop = el.scrollHeight;
       }
+      // 延迟重置标志，让 onScroll 事件能够识别这是程序控制的滚动
+      setTimeout(() => {
+        this.isProgrammaticScroll = false;
+      }, 100);
+    },
+    setAutoScrollDownDisabled(disabled: boolean) {
+      this.autoScrollDownDisabled = disabled;
     },
     resetInput() {
       this.userInput = "";
