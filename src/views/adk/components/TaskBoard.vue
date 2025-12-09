@@ -71,7 +71,7 @@ const fetchTasks = async () => {
       status:
         item.status === "DONE"
           ? "success"
-          : item.status === "FAILED"
+          : item.status === "FAIL"
             ? "error"
             : item.status === "RUNNING"
               ? "running"

@@ -466,7 +466,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           }
         }
       }
-      this.checkFinalResponse(part, e ? e : null);
+      this.checkFinalResponse(part, e ? e : null, index);
 
       const message: any = {
         role,
@@ -659,7 +659,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       }
     },
 
-    checkFinalResponse(part: any, e?: any) {
+    checkFinalResponse(part: any, e?: any, index?: number) {
       // 判断是否对话结束
       // console.log('【checkFinalResponse】', part, e);
       if (e?.actions.skip_summarization || e?.longRunningToolIds?.length) {
@@ -677,7 +677,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
 
       if (this.isFinalResponse) {
         console.log("---- 判断出对话已经结束! ");
-        !this.checkTaskRunning() && this.stopSessionPolling();
+        if (index === this.messageList.length - 1) {
+          !this.checkTaskRunning() && this.stopSessionPolling();
+        }
         window.parent.postMessage(
           {
             key: "isFinalResponse",

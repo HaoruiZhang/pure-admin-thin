@@ -124,6 +124,20 @@ class PureHttp {
         const $config = response.config;
         // 关闭进度条动画
         NProgress.done();
+        // 检查响应体的 code，如果是 401 或 403，向 parent 发送登录超时消息
+        const responseCode = response?.data?.code;
+        if (responseCode === 401 || responseCode === 403) {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage(
+              {
+                key: "loginTimeout",
+                code: responseCode,
+                message: "登录超时，请重新登录"
+              },
+              "*"
+            );
+          }
+        }
         // 优先判断post/get等方法是否传入回调，否则执行初始化设置等回调
         if (typeof $config.beforeResponseCallback === "function") {
           $config.beforeResponseCallback(response);
@@ -140,6 +154,21 @@ class PureHttp {
         $error.isCancelRequest = Axios.isCancel($error);
         // 关闭进度条动画
         NProgress.done();
+        // 检查错误响应体的 code，如果是 401 或 403，向 parent 发送登录超时消息
+        const errorData = error?.response?.data as any;
+        const errorCode = errorData?.code;
+        if (errorCode === 401 || errorCode === 403) {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage(
+              {
+                key: "loginTimeout",
+                code: errorCode,
+                message: "登录超时，请重新登录"
+              },
+              "*"
+            );
+          }
+        }
         // 所有的响应异常 区分来源为取消请求/非取消请求
         return Promise.reject($error);
       }
