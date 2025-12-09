@@ -14,7 +14,7 @@ import {
   createPollingController
 } from "@/views/adk/utils";
 import type { PollingController } from "@/views/adk/utils";
-import { adkService } from "@/api/adk.service";
+import { adkService, backendService } from "@/api/adk.service";
 // import {URLUtil} from '../../../utils/url-util';
 import { AccessiblePromise } from "@/views/adk/utils";
 interface SSEController {
@@ -257,7 +257,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       // const targetSession = await adkService.getSessionDetail(newSessionId);
       adkService
         .getSessionDetail(this.user_info.user_id, newSessionId)
-        .then((sessionDetail: AdkSession) => {
+        .then(async (sessionDetail: AdkSession) => {
           console.log("▶️ 获取会话详情: ", sessionDetail);
           if (sessionDetail) {
             this.currentSession = sessionDetail;
@@ -270,8 +270,44 @@ export const useADKChatStore = defineStore("adkChatStore", {
               },
               "*"
             );
+            // 查询当前session的tasklist，检查是否有正在运行的任务
+            await this.checkAndStartTaskPolling();
           }
         });
+    },
+    /**
+     * 检查是否有正在运行的任务
+     */
+    async checkTaskRunning() {
+      const res: any = await backendService.getTaskList({
+        session: String(this.currentSession.id),
+        token: this.getToken()
+      });
+      const tasksData = res?.data?.tasks || [];
+      const hasRunningTask = tasksData.some(
+        (task: any) => task.status === "RUNNING"
+      );
+      return hasRunningTask;
+    },
+    /**
+     * 检查任务列表，如果有正在运行的任务，则启动轮询，并显示loading
+     */
+    async checkAndStartTaskPolling() {
+      if (!this.currentSession?.id) return;
+      try {
+        if (await this.checkTaskRunning()) {
+          console.log("▶️ 检测到有正在运行的任务，启动轮询");
+          // 启动轮询并显示loading
+          this.startSessionPolling();
+        } else {
+          // 如果没有运行中的任务，确保停止轮询
+          this.stopSessionPolling();
+        }
+      } catch (error) {
+        console.error("❌ 查询任务列表失败:", error);
+        // 查询失败时，不启动轮询
+        this.stopSessionPolling();
+      }
     },
     startSessionPolling(interval = 5000) {
       if (!this.currentSession?.id) return;
@@ -283,6 +319,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         immediate: true,
         task: async () => {
           if (!this.currentSession?.id) return;
+          // 继续轮询session详情
           const sessionDetail = (await adkService.getSessionDetail(
             this.user_info.user_id,
             this.currentSession.id
@@ -487,7 +524,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
               "formMsgIndex",
               this.messageList.length.toString()
             );
-            this.isUserNewMessage &&
+            if (this.isUserNewMessage) {
               window.parent.postMessage(
                 {
                   key: "userFormConfig",
@@ -496,6 +533,11 @@ export const useADKChatStore = defineStore("adkChatStore", {
                 },
                 "*"
               );
+              console.log("==== 设置operatingFormIndex: ", index + 1);
+              this.operatingFormEventId = message.eventId;
+              this.operatingFormIndex = index + 1;
+            }
+
             this.insertMessageBeforeLoadingMessage([
               message,
               { ...message, formConfig: { name: "Analysis Form" } }
@@ -635,7 +677,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
 
       if (this.isFinalResponse) {
         console.log("---- 判断出对话已经结束! ");
-        this.stopSessionPolling();
+        !this.checkTaskRunning() && this.stopSessionPolling();
         window.parent.postMessage(
           {
             key: "isFinalResponse",
@@ -668,7 +710,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             "formMsgIndex",
             this.messageList.length.toString()
           );
-          this.isUserNewMessage &&
+          if (this.isUserNewMessage) {
             window.parent.postMessage(
               {
                 key: "userFormConfig",
@@ -677,6 +719,14 @@ export const useADKChatStore = defineStore("adkChatStore", {
               },
               "*"
             );
+            this.operatingFormEventId = lastMessage.eventId;
+            console.log(
+              "==== 设置operatingFormIndex: ",
+              this.messageList.length + 1
+            );
+            this.operatingFormIndex = this.messageList.length + 1;
+          }
+
           this.insertMessageBeforeLoadingMessage([
             lastMessage,
             { ...lastMessage, formConfig: { name: "Analysis Form" } }
@@ -717,8 +767,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
     },
 
     async sendMessage2() {
+      this.stopSessionPolling();
       this.sendLoading = true;
-
       if (!this.userInput.trim() && this.selectedFiles?.length <= 0) return;
 
       if (this.updateSessionInterval) {
@@ -774,6 +824,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           // 处理
         },
         err => console.error(err),
+        // complete 回调
         async () => {
           this.sendLoading = false;
           console.log("complete");
@@ -795,6 +846,12 @@ export const useADKChatStore = defineStore("adkChatStore", {
             },
             "*"
           );
+          setTimeout(async () => {
+            if (await this.checkTaskRunning()) {
+              this.sendLoading = true;
+              this.startSessionPolling();
+            }
+          }, 3000);
         }
       );
       this.userInput = "";

@@ -208,7 +208,7 @@ onMounted(async () => {
     "
   >
     <el-splitter>
-      <el-splitter-panel :min="200" :max="500" :size="260">
+      <el-splitter-panel :min="274" :max="500" :size="274">
         <LeftSidePanel />
       </el-splitter-panel>
 
