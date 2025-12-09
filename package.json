@@ -10,6 +10,7 @@
     "build": "rimraf dist && NODE_OPTIONS=--max-old-space-size=8192 vite build",
     "build:test": "rimraf dist && vite build --mode test",
     "build:prod": "rimraf dist && vite build --mode production",
+    "build:research": "rimraf dist && vite build --mode research",
     "serve": "pnpm dev",
     "build:staging": "rimraf dist && vite build --mode staging",
     "report": "rimraf dist && vite build",

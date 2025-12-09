@@ -271,7 +271,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
               "*"
             );
             // 查询当前session的tasklist，检查是否有正在运行的任务
-            await this.checkAndStartTaskPolling();
+            (await this.checkTaskRunning()) && this.startSessionPolling();
           }
         });
     },
@@ -289,26 +289,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       );
       return hasRunningTask;
     },
-    /**
-     * 检查任务列表，如果有正在运行的任务，则启动轮询，并显示loading
-     */
-    async checkAndStartTaskPolling() {
-      if (!this.currentSession?.id) return;
-      try {
-        if (await this.checkTaskRunning()) {
-          console.log("▶️ 检测到有正在运行的任务，启动轮询");
-          // 启动轮询并显示loading
-          this.startSessionPolling();
-        } else {
-          // 如果没有运行中的任务，确保停止轮询
-          this.stopSessionPolling();
-        }
-      } catch (error) {
-        console.error("❌ 查询任务列表失败:", error);
-        // 查询失败时，不启动轮询
-        this.stopSessionPolling();
-      }
-    },
+
     startSessionPolling(interval = 5000) {
       if (!this.currentSession?.id) return;
       this.sessionPolling?.stop();
@@ -316,7 +297,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       this.sessionPolling = createPollingController({
         interval,
         autoStart: true,
-        immediate: true,
+        immediate: false,
         task: async () => {
           if (!this.currentSession?.id) return;
           // 继续轮询session详情
@@ -337,6 +318,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
           const prevEventCount = this.currentSession?.events?.length ?? 0;
           this.currentSession = sessionDetail;
           this.parseSessionDetail(sessionDetail, prevEventCount, false);
+          if (await !this.checkTaskRunning()) {
+            this.stopSessionPolling();
+          }
         },
         onError: err => {
           console.error("❌ Session polling error:", err);
