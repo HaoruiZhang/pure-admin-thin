@@ -11,7 +11,9 @@ import {
   ElScrollbar,
   ElCollapse,
   ElCollapseItem,
-  ElEmpty
+  ElEmpty,
+  ElButton,
+  ElMessage
 } from "element-plus";
 import {
   VideoPlay,
@@ -20,7 +22,8 @@ import {
   Loading,
   Document,
   Cpu,
-  Monitor
+  Monitor,
+  Close
 } from "@element-plus/icons-vue";
 
 const props = defineProps({
@@ -159,6 +162,35 @@ const viewTaskInfo = (task: TaskItem) => {
     "*"
   );
 };
+
+const killTask = async (task: TaskItem) => {
+  if (!currentSession.value?.id) {
+    ElMessage.error("会话ID不存在");
+    return;
+  }
+
+  const pid = task.details?.process_id;
+  if (!pid) {
+    ElMessage.error("任务进程ID不存在");
+    return;
+  }
+
+  try {
+    await backendService.killTask({
+      session: currentSession.value.id,
+      pid: String(pid),
+      tagname: task.details?.tagname,
+      token: adkStore.getToken(),
+      subtype: task.details?.subtype
+    });
+    ElMessage.success("任务已终止");
+    // 刷新任务列表
+    await fetchTasks();
+  } catch (error: any) {
+    console.error("Failed to kill task:", error);
+    ElMessage.error(error?.message || "终止任务失败");
+  }
+};
 </script>
 
 <template>
@@ -197,17 +229,30 @@ const viewTaskInfo = (task: TaskItem) => {
                   </el-icon>
                   <span class="name">{{ task.name }}</span>
                 </div>
-                <el-tag
-                  :type="getStatusColor(task.status)"
-                  effect="light"
-                  size="small"
-                  class="status-tag"
-                >
-                  {{ getStatusLabel(task.status) }}
-                  <el-icon v-if="task.status === 'running'" class="is-loading"
-                    ><Loading
-                  /></el-icon>
-                </el-tag>
+                <div class="status-actions">
+                  <el-tag
+                    :type="getStatusColor(task.status)"
+                    effect="light"
+                    size="small"
+                    class="status-tag"
+                  >
+                    {{ getStatusLabel(task.status) }}
+                    <el-icon v-if="task.status === 'running'" class="is-loading"
+                      ><Loading
+                    /></el-icon>
+                  </el-tag>
+                  <el-button
+                    v-if="task.status === 'running'"
+                    type="danger"
+                    size="small"
+                    :icon="Close"
+                    link
+                    class="kill-btn"
+                    @click.stop="killTask(task)"
+                  >
+                    终止
+                  </el-button>
+                </div>
               </div>
             </template>
 
@@ -343,6 +388,17 @@ const viewTaskInfo = (task: TaskItem) => {
 
     .type-icon {
       color: #909399;
+    }
+  }
+
+  .status-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    .kill-btn {
+      padding: 0 4px;
+      font-size: 12px;
     }
   }
 }

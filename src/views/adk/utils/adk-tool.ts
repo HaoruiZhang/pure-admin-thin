@@ -359,6 +359,10 @@ export const getParentEventId = (child: HTMLElement) => {
   const messageBox = child.closest<HTMLElement>("[data-event-id]");
   return messageBox?.dataset.eventId ?? "";
 };
+export const getParentInvocationId = (child: HTMLElement) => {
+  const messageBox = child.closest<HTMLElement>("[data-invocation-id]");
+  return messageBox?.dataset.invocationId ?? "";
+};
 
 export function startSse(
   req: AgentRunRequest,

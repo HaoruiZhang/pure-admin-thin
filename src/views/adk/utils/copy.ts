@@ -3,7 +3,9 @@
 // import { showSuccessToast } from "vant";
 import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store/modules/adk.store";
-import { getParentEventId } from ".";
+import { getParentEventId, getParentInvocationId } from ".";
+import { taskService } from "@/api/adk.service";
+
 export const onCopy = (text: string, tooltip?: string) => {
   const oInput = document.createElement("input");
   oInput.value = text;
@@ -37,6 +39,24 @@ export const onCopyDom = (node: any) => {
 };
 
 export const onRunDom = (node: any) => {
+  const content =
+    typeof node === "string"
+      ? node
+      : (node?.innerText ?? node?.textContent ?? "");
+  if (!content) return;
+  const adkStore = useADKChatStore();
+  const invocationId = getParentInvocationId(node);
+  const { currentSession } = storeToRefs(adkStore);
+
+  console.log("获取的代码内容\n", content, "\n invocationId\n", invocationId);
+  taskService.rerunTask({
+    user_id: adkStore.user_info?.user_id,
+    session_id: currentSession.value.id,
+    invocation_id: invocationId
+  });
+};
+
+export const onRunDom_raw = (node: any) => {
   const content =
     typeof node === "string"
       ? node

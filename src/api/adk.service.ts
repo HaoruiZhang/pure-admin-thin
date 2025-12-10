@@ -1,4 +1,4 @@
-import { adkHttp, agentHttp } from "@/utils/http";
+import { adkHttp, agentHttp, taskHttp } from "@/utils/http";
 import type { AgentRunRequest } from "@/types";
 import { ref } from "vue";
 
@@ -215,6 +215,18 @@ export const adkService = {
     };
   }
 };
+
+export const taskService = {
+  rerunTask: (data: {
+    user_id: string;
+    session_id: string;
+    invocation_id: string;
+    task_index?: number;
+  }) => {
+    return taskHttp.request("post", `rerun`, { data });
+  }
+};
+
 export const backendService = {
   getTaskList: (data: {
     session: string;
@@ -222,6 +234,15 @@ export const backendService = {
     token?: string;
   }) => {
     return agentHttp.request("post", `ssh/task-list`, { data });
+  },
+  killTask: (data: {
+    session: string;
+    pid: string;
+    tagname?: string;
+    token?: string;
+    subtype?: string;
+  }) => {
+    return agentHttp.request("post", `ssh/task-stop`, { data });
   }
 
   // getTaskDetail: (userId: string | number, taskId: number | string) => {

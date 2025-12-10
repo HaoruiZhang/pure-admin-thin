@@ -523,6 +523,7 @@ onUnmounted(() => {
               }
             ]"
             :data-event-id="item.eventId ?? ''"
+            :data-invocation-id="item.invocationId ?? ''"
           >
             <div class="mat-col AI-mat">
               <el-button v-if="false && item.role !== 'user'"
@@ -562,7 +563,8 @@ onUnmounted(() => {
                 functionCall.id: {{ item.functionCall?.id }} <br />
                 functionResponse.id: {{ item.functionResponse?.id }} <br />
                 formConfig.id: {{ item.formConfig?.id }} <br />
-                taskInfo.id: {{ item.taskInfo?.id }}
+                taskInfo.id: {{ item.taskInfo?.id }} <br />
+                invocationId: {{ item.invocationId }}
               </div>
               <!-- functionCall 显示（包含 functionResponse） -->
               <div

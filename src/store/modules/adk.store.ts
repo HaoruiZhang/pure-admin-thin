@@ -496,6 +496,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             e.groundingMetadata.searchEntryPoint.renderedContent;
         }
         message.eventId = e?.id;
+        message.invocationId = e?.invocationId;
         this.eventMessageIndexArray[index] = part.text;
         if (part.text.includes("<FORM_CONFIG>")) {
           const [cleanedText, fields] = extractFormConfigs(part.text);
@@ -530,22 +531,22 @@ export const useADKChatStore = defineStore("adkChatStore", {
         } else if (part.text.includes("```")) {
           const extracted = extractScriptContent(part.text);
           if (extracted) {
-            const { language, content } = extracted;
+            // const { language, content } = extracted;
             // console.log('---- 脚本内容: ', content);
             // console.log('---- this.sessionId: ', this.sessionId, window.sessionStorage.getItem('sessionId'));
-            this.isUserNewMessage &&
-              window.parent.postMessage(
-                // 新对话的才自动执行
-                {
-                  key: "mustExecuteScript",
-                  type: "mustExecuteScript",
-                  script: content,
-                  eventId: message.eventId,
-                  subtype: `code/${language.toLowerCase()}`
-                },
-                "*"
-              );
-            console.log("📦 从代码块里发送_isFinalResponse");
+            // this.isUserNewMessage &&
+            //   window.parent.postMessage(
+            //     // 新对话的才自动执行
+            //     {
+            //       key: "mustExecuteScript",
+            //       type: "mustExecuteScript",
+            //       script: content,
+            //       eventId: message.eventId,
+            //       subtype: `code/${language.toLowerCase()}`
+            //     },
+            //     "*"
+            //   );
+            // console.log("📦 从代码块里发送_isFinalResponse");
             window.parent.postMessage(
               {
                 key: "isFinalResponse",
@@ -574,10 +575,12 @@ export const useADKChatStore = defineStore("adkChatStore", {
       } else if (part.functionCall) {
         message.functionCall = part.functionCall;
         message.eventId = e?.id;
+        message.invocationId = e?.invocationId;
         this.eventMessageIndexArray[index] = part.functionCall;
       } else if (part.functionResponse) {
         message.functionResponse = part.functionResponse;
         message.eventId = e?.id;
+        message.invocationId = e?.invocationId;
         message.functionResponse["query"] = getQueryFromId(
           part.functionResponse.id,
           this.messageList,
@@ -598,14 +601,14 @@ export const useADKChatStore = defineStore("adkChatStore", {
             "extract_user_specified_mime_type_path" &&
           this.isUserNewMessage
         ) {
-          window.parent.postMessage(
-            {
-              key: "specifiedMimePath",
-              type: "specifiedMimePath",
-              path: part.functionResponse.response.mime_type_path
-            },
-            "*"
-          );
+          // window.parent.postMessage(
+          //   {
+          //     key: "specifiedMimePath",
+          //     type: "specifiedMimePath",
+          //     path: part.functionResponse.response.mime_type_path
+          //   },
+          //   "*"
+          // );
           this.isUserNewMessage = false;
         }
         if (
@@ -685,6 +688,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       if (!lastMessage?.text) return;
       this.messageList.pop();
       lastMessage.eventId = localStorage.getItem("finalEventId")!;
+      lastMessage.invocationId = localStorage.getItem("finalInvocationId")!;
       if (lastMessage.text.includes("<FORM_CONFIG>")) {
         const [cleanedText, fields] = extractFormConfigs(lastMessage.text);
         if (cleanedText && fields.length) {
@@ -721,20 +725,20 @@ export const useADKChatStore = defineStore("adkChatStore", {
       } else if (lastMessage.text.includes("```")) {
         const extracted = extractScriptContent(lastMessage.text);
         if (extracted) {
-          const { language, content } = extracted;
+          // const { language, content } = extracted;
           // console.log('---- 脚本内容: ', content);
-          this.isUserNewMessage &&
-            window.parent.postMessage(
-              // 新对话的才自动执行
-              {
-                key: "mustExecuteScript",
-                type: "mustExecuteScript",
-                script: content,
-                subtype: `code/${language.toLowerCase()}`,
-                eventId: localStorage.getItem("finalEventId")!
-              },
-              "*"
-            );
+          // this.isUserNewMessage &&
+          //   window.parent.postMessage(
+          //     // 新对话的才自动执行
+          //     {
+          //       key: "mustExecuteScript",
+          //       type: "mustExecuteScript",
+          //       script: content,
+          //       subtype: `code/${language.toLowerCase()}`,
+          //       eventId: localStorage.getItem("finalEventId")!
+          //     },
+          //     "*"
+          //   );
           this.insertMessageBeforeLoadingMessage([
             lastMessage,
             {
@@ -887,6 +891,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             this.eventMessageIndexArray[index] = newChunk;
             this.streamingTextMessage = null;
             localStorage.setItem("finalEventId", chunkJson.id);
+            localStorage.setItem("finalInvocationId", chunkJson.invocationId);
             this.scrollToBottomSmooth();
             return;
           }
