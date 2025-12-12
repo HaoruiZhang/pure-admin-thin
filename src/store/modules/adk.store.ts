@@ -290,6 +290,142 @@ export const useADKChatStore = defineStore("adkChatStore", {
       return hasRunningTask;
     },
 
+    /**
+     * 检查任务对应的event是否有新的回复且符合结束条件
+     * @param taskId - task的id或tagname，格式为 'e-' + eventid
+     * @param sessionDetail - 当前session的详情
+     * @returns 如果找到对应的event且有符合结束条件的回复，返回true
+     */
+    checkTaskEventHasFinalResponse(
+      taskId: string,
+      sessionDetail: AdkSession
+    ): boolean {
+      // 从taskId中提取eventid（去掉'e-'前缀）
+      const eventId = taskId.startsWith("e-") ? taskId.substring(2) : taskId;
+
+      if (!sessionDetail?.events || sessionDetail.events.length === 0) {
+        return false;
+      }
+
+      // 查找对应的event
+      const taskEventIndex = sessionDetail.events.findIndex(
+        (event: any) => event.id === eventId
+      );
+
+      if (taskEventIndex === -1) {
+        // 如果找不到对应的event，返回false，继续轮询
+        return false;
+      }
+
+      // 查找该event之后是否有新的bot回复
+      for (let i = taskEventIndex + 1; i < sessionDetail.events.length; i++) {
+        const event = sessionDetail.events[i];
+
+        // 只检查bot的回复（非user消息）
+        if (event.author === "user") {
+          continue;
+        }
+
+        // 检查该event的parts是否符合结束条件
+        if (event.content?.parts) {
+          for (const part of event.content.parts) {
+            // 使用checkFinalResponse的逻辑判断是否符合结束条件
+            const isFinal = this.isPartFinalResponse(part, event);
+            if (isFinal) {
+              console.log(
+                `✅ Task ${taskId} 对应的event ${eventId} 已有符合结束条件的回复:`,
+                event.id
+              );
+              return true;
+            }
+          }
+        }
+      }
+
+      // 没有找到符合结束条件的回复
+      return false;
+    },
+
+    /**
+     * 判断part是否符合结束条件（从checkFinalResponse提取的逻辑）
+     */
+    isPartFinalResponse(part: any, event: any): boolean {
+      if (
+        event?.actions?.skip_summarization ||
+        event?.longRunningToolIds?.length
+      ) {
+        return true;
+      }
+
+      if (
+        !part.functionResponse &&
+        !part.functionCall &&
+        !event?.partial &&
+        !part.text?.includes("<backend-reply-start>")
+      ) {
+        return true;
+      }
+
+      return false;
+    },
+
+    /**
+     * 检查是否应该继续轮询
+     * 不仅要检查是否有RUNNING的任务，还要检查DONE的任务是否已有符合结束条件的回复
+     */
+    async shouldContinuePolling(): Promise<boolean> {
+      const res: any = await backendService.getTaskList({
+        session: String(this.currentSession.id),
+        token: this.getToken()
+      });
+      const tasksData = res?.data?.tasks || [];
+
+      // 如果有RUNNING的任务，继续轮询
+      const hasRunningTask = tasksData.some(
+        (task: any) => task.status === "RUNNING"
+      );
+      if (hasRunningTask) {
+        return true;
+      }
+
+      // 检查所有DONE的任务是否都有符合结束条件的回复
+      const doneTasks = tasksData.filter((task: any) => task.status === "DONE");
+
+      if (doneTasks.length === 0) {
+        // 没有DONE的任务，也没有RUNNING的任务，可以停止轮询
+        return false;
+      }
+
+      // 获取最新的session详情
+      const sessionDetail = (await adkService.getSessionDetail(
+        this.user_info.user_id,
+        this.currentSession.id
+      )) as AdkSession;
+
+      // 检查每个DONE的任务是否都有符合结束条件的回复
+      for (const task of doneTasks) {
+        const taskId = task.tagname || task.id;
+        if (!taskId) continue;
+
+        const hasFinalResponse = this.checkTaskEventHasFinalResponse(
+          taskId,
+          sessionDetail
+        );
+
+        if (!hasFinalResponse) {
+          // 如果有一个DONE的任务还没有符合结束条件的回复，继续轮询
+          console.log(
+            `⏳ Task ${taskId} 已完成但尚未收到符合结束条件的回复，继续轮询`
+          );
+          return true;
+        }
+      }
+
+      // 所有DONE的任务都有符合结束条件的回复，可以停止轮询
+      console.log("✅ 所有任务都已完成且已有符合结束条件的回复，停止轮询");
+      return false;
+    },
+
     startSessionPolling(interval = 5000) {
       if (!this.currentSession?.id) return;
       this.sessionPolling?.stop();
@@ -318,7 +454,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
           const prevEventCount = this.currentSession?.events?.length ?? 0;
           this.currentSession = sessionDetail;
           this.parseSessionDetail(sessionDetail, prevEventCount, false);
-          if (await !this.checkTaskRunning()) {
+          const shouldContinue = await this.shouldContinuePolling();
+          console.log("---- 检查是否应该继续轮询: ", shouldContinue);
+          if (!shouldContinue) {
             this.stopSessionPolling();
           }
         },
@@ -646,7 +784,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       }
     },
 
-    checkFinalResponse(part: any, e?: any, index?: number) {
+    async checkFinalResponse(part: any, e?: any, index?: number) {
       // 判断是否对话结束
       // console.log('【checkFinalResponse】', part, e);
       if (e?.actions.skip_summarization || e?.longRunningToolIds?.length) {
@@ -665,7 +803,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
       if (this.isFinalResponse) {
         console.log("---- 判断出对话已经结束! ");
         if (index === this.messageList.length - 1) {
-          !this.checkTaskRunning() && this.stopSessionPolling();
+          // 使用新的shouldContinuePolling方法检查是否应该停止轮询
+          const shouldContinue = await this.shouldContinuePolling();
+          !shouldContinue && this.stopSessionPolling();
         }
         window.parent.postMessage(
           {
