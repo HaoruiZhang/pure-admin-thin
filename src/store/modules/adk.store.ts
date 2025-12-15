@@ -48,6 +48,7 @@ interface adkChatState {
     access_privilege_bits?: number;
   };
   redirectUri: string;
+  specifiedMimePath: string;
   userFormConfig?: any;
   isFinalResponse: boolean;
   updateSessionInterval?: any;
@@ -55,6 +56,7 @@ interface adkChatState {
   setCurrentSessionReady?: AccessiblePromise<void>;
   sessionPolling?: PollingController;
   lastSessionSyncTime?: number;
+  sessionPollingCount?: number; // 轮询计数器，用于跟踪轮询次数
   operatingFormIndex?: number;
   isDebugMode: boolean;
   needToFilterSessionList: boolean;
@@ -67,6 +69,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
   state: (): adkChatState => ({
     sseController: null,
     token: "",
+    specifiedMimePath: "",
     latestThought: "",
     userInput: "",
     streamingTextMessage: null,
@@ -98,6 +101,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     setCurrentSessionReady: new AccessiblePromise<void>(),
     sessionPolling: undefined,
     lastSessionSyncTime: 0,
+    sessionPollingCount: 0, // 轮询计数器初始值
     autoScrollDownDisabled: false, // 为true时，禁止自动滚动
     isProgrammaticScroll: true // 判断是否代码控制滚动
   }),
@@ -134,6 +138,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
       return adkService
         .createSession(this.user_info.user_id)
         .then((res: any) => {
+          this.stopSessionPolling();
+          this.stopSSE();
           this.currentSession = getNewSession(this.user_info.user_id);
           this.currentSession.id = res.id;
           this.sessionList.unshift(this.currentSession);
@@ -164,6 +170,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             key: "sessionDeleted",
             sessionId: this.currentSession.id
           });
+          this.stopSessionPolling();
         });
     },
     storeEvents(part: any, e: any, index: number) {
@@ -255,6 +262,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
       //   return;
       // }
       // const targetSession = await adkService.getSessionDetail(newSessionId);
+      this.stopSessionPolling();
+      this.stopSSE();
       adkService
         .getSessionDetail(this.user_info.user_id, newSessionId)
         .then(async (sessionDetail: AdkSession) => {
@@ -271,7 +280,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
               "*"
             );
             // 查询当前session的tasklist，检查是否有正在运行的任务
-            (await this.checkTaskRunning()) && this.startSessionPolling();
+            (await this.checkTaskRunning()) && this.startSessionPolling(1);
           }
         });
     },
@@ -284,22 +293,30 @@ export const useADKChatStore = defineStore("adkChatStore", {
         token: this.getToken()
       });
       const tasksData = res?.data?.tasks || [];
-      const hasRunningTask = tasksData.some(
-        (task: any) => task.status === "RUNNING"
-      );
+      const hasRunningTask = tasksData.some((task: any) => {
+        return task.status !== "DONE" || task.status_ai !== "DONE";
+      });
+      console.log("❓️ checkTaskRunning: ", hasRunningTask);
       return hasRunningTask;
     },
 
-    startSessionPolling(interval = 5000) {
+    async startSessionPolling(from: number, interval = 5000) {
       if (!this.currentSession?.id) return;
+      console.log("🔁🔁 开始轮询: from: ", from);
       this.sessionPolling?.stop();
       this.sendLoading = true;
+      await nextTick();
+      this.scrollToBottomSmooth();
+      // 重置轮询计数器
+      this.sessionPollingCount = 0;
       this.sessionPolling = createPollingController({
         interval,
         autoStart: true,
         immediate: false,
         task: async () => {
           if (!this.currentSession?.id) return;
+          // 增加轮询计数
+          this.sessionPollingCount = (this.sessionPollingCount || 0) + 1;
           // 继续轮询session详情
           const sessionDetail = (await adkService.getSessionDetail(
             this.user_info.user_id,
@@ -312,13 +329,28 @@ export const useADKChatStore = defineStore("adkChatStore", {
           if (!hasUpdates) {
             this.currentSession = sessionDetail;
             this.lastSessionSyncTime = sessionDetail?.lastUpdateTime;
+            // 前3次轮询不查询任务状态，直接返回
+            if (this.sessionPollingCount <= 4) {
+              return;
+            }
+            // 第4次开始才检查任务状态
+            // 检查任务状态，若无运行中任务则停止轮询
+            if (!(await this.checkTaskRunning())) {
+              this.stopSessionPolling();
+            }
             return;
           }
 
           const prevEventCount = this.currentSession?.events?.length ?? 0;
           this.currentSession = sessionDetail;
           this.parseSessionDetail(sessionDetail, prevEventCount, false);
-          if (await !this.checkTaskRunning()) {
+          // 前3次轮询不查询任务状态
+          if (this.sessionPollingCount <= 4) {
+            return;
+          }
+          // 第4次开始才检查任务状态
+          // 检查任务状态，若无运行中任务则停止轮询
+          if (!(await this.checkTaskRunning())) {
             this.stopSessionPolling();
           }
         },
@@ -534,7 +566,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             // const { language, content } = extracted;
             // console.log('---- 脚本内容: ', content);
             // console.log('---- this.sessionId: ', this.sessionId, window.sessionStorage.getItem('sessionId'));
-            // this.isUserNewMessage &&
+            this.isUserNewMessage && this.startSessionPolling(2);
             //   window.parent.postMessage(
             //     // 新对话的才自动执行
             //     {
@@ -596,10 +628,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
           "zhaoxiong-"
         ].includes(localStorage.getItem("userId") || "");
         if (
+          this.isUserNewMessage &&
           part.functionResponse.name &&
-          part.functionResponse.name ===
-            "extract_user_specified_mime_type_path" &&
-          this.isUserNewMessage
+          part.functionResponse.name === "extract_user_specified_mime_type_path"
         ) {
           // window.parent.postMessage(
           //   {
@@ -609,6 +640,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
           //   },
           //   "*"
           // );
+          this.specifiedMimePath =
+            part.functionResponse.response.mime_type_path;
           this.isUserNewMessage = false;
         }
         if (
@@ -727,7 +760,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         if (extracted) {
           // const { language, content } = extracted;
           // console.log('---- 脚本内容: ', content);
-          // this.isUserNewMessage &&
+          this.isUserNewMessage && this.startSessionPolling(3);
           //   window.parent.postMessage(
           //     // 新对话的才自动执行
           //     {
@@ -836,12 +869,16 @@ export const useADKChatStore = defineStore("adkChatStore", {
             },
             "*"
           );
-          setTimeout(async () => {
-            if (await this.checkTaskRunning()) {
-              this.sendLoading = true;
-              this.startSessionPolling();
-            }
-          }, 3000);
+          if (this.specifiedMimePath) {
+            this.specifiedMimePath = "";
+            this.startSessionPolling(4);
+          } else {
+            setTimeout(async () => {
+              if (await this.checkTaskRunning()) {
+                this.startSessionPolling(5);
+              }
+            }, 3000);
+          }
         }
       );
       this.userInput = "";

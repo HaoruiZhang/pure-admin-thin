@@ -420,7 +420,7 @@ const handleClickMessage = (message: any, index: number) => {
       {
         key: "showTaskInfo",
         type: "showTaskInfo",
-        taskId: "e-" + message.eventId,
+        taskId: message.invocationId,
         sessionId: currentSession.value.id
       },
       "*"
@@ -649,6 +649,7 @@ onUnmounted(() => {
               <!-- <span style="white-space: pre-wrap">{{
                 item.content.parts[0].text
               }}</span> -->
+
               <!-- 消息内容 -->
               <div
                 v-if="item.text && !item.formConfig && !item.taskInfo"
@@ -686,12 +687,17 @@ onUnmounted(() => {
                 </el-button>
               </div>
 
+              <!--内联图片-->
               <div
                 v-if="item.inlineData && !item.formConfig && !item.taskInfo"
                 class="message-content"
               >
                 <div
-                  v-if="item.inlineData.mimeType.startsWith('image/png')"
+                  v-if="
+                    ['image/png', 'image/svg+xml'].includes(
+                      item.inlineData.mimeType
+                    )
+                  "
                   class="inline-data-content"
                 >
                   <img :src="item.inlineData.data" />

@@ -72,11 +72,11 @@ const fetchTasks = async () => {
       type: item.subtype?.startsWith("code/") ? "script" : "function",
       name: item.filename ? item.filename.split("/").pop() : "Task",
       status:
-        item.status === "DONE"
+        item.status === "DONE" && item.status_ai === "DONE"
           ? "success"
           : item.status === "FAIL"
             ? "error"
-            : item.status === "RUNNING"
+            : item.status === "RUNNING" || item.status_ai !== "DONE"
               ? "running"
               : "pending",
       content: item.filename || "",
@@ -241,7 +241,7 @@ const killTask = async (task: TaskItem) => {
                       ><Loading
                     /></el-icon>
                   </el-tag>
-                  <el-button
+                  <!-- <el-button
                     v-if="task.status === 'running'"
                     type="danger"
                     size="small"
@@ -251,7 +251,7 @@ const killTask = async (task: TaskItem) => {
                     @click.stop="killTask(task)"
                   >
                     终止
-                  </el-button>
+                  </el-button> -->
                 </div>
               </div>
             </template>

@@ -46,7 +46,7 @@ function bindEventHandlers() {
     );
     switch (event.data.key) {
       case "startRunTask":
-        adkStore.startSessionPolling();
+        adkStore.startSessionPolling(6);
         break;
 
       case "task-state":
