@@ -204,6 +204,12 @@ export const useADKChatStore = defineStore("adkChatStore", {
 
     async scrollToBottomSmooth() {
       // 如果用户正在滚动查看历史消息，不执行自动滚动
+      console.log(
+        "⬇️ scrollToBottomSmooth, this.autoScrollDownDisabled:",
+        this.autoScrollDownDisabled,
+        "\n    this.isProgrammaticScroll:",
+        this.isProgrammaticScroll
+      );
       if (this.autoScrollDownDisabled) return;
 
       // 标记这是程序控制的滚动
@@ -300,7 +306,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       return hasRunningTask;
     },
 
-    async startSessionPolling(from: number, interval = 5000) {
+    async startSessionPolling(from: number, queryCount = 4, interval = 5000) {
       if (!this.currentSession?.id) return;
       console.log("🔁🔁 开始轮询: from: ", from);
       this.sessionPolling?.stop();
@@ -330,7 +336,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             this.currentSession = sessionDetail;
             this.lastSessionSyncTime = sessionDetail?.lastUpdateTime;
             // 前3次轮询不查询任务状态，直接返回
-            if (this.sessionPollingCount <= 4) {
+            if (this.sessionPollingCount <= queryCount) {
               return;
             }
             // 第4次开始才检查任务状态
@@ -345,7 +351,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           this.currentSession = sessionDetail;
           this.parseSessionDetail(sessionDetail, prevEventCount, false);
           // 前3次轮询不查询任务状态
-          if (this.sessionPollingCount <= 4) {
+          if (this.sessionPollingCount <= queryCount) {
             return;
           }
           // 第4次开始才检查任务状态

@@ -49,16 +49,22 @@ export const onRunDom = async (node: any) => {
   const { currentSession } = storeToRefs(adkStore);
 
   console.log("获取的代码内容\n", content, "\n invocationId\n", invocationId);
-  const res: any = await taskService.rerunTask({
-    user_id: adkStore.user_info?.user_id,
-    session_id: currentSession.value.id,
-    invocation_id: invocationId
-  });
-  if (res.success) {
-    ElMessage.success("任务已重新运行");
-    adkStore.startSessionPolling();
-  } else {
+  try {
+    const res: any = await taskService.rerunTask({
+      user_id: adkStore.user_info?.user_id,
+      session_id: currentSession.value.id,
+      invocation_id: invocationId
+    });
+    if (res.success) {
+      ElMessage.success("任务已重新运行");
+      adkStore.startSessionPolling(11);
+    } else {
+      ElMessage.error("任务重新运行失败");
+    }
+  } catch (error) {
+    console.error("任务重新运行失败", error);
     ElMessage.error("任务重新运行失败");
+    return;
   }
 };
 

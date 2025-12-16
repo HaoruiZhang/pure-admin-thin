@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, onBeforeUnmount } from "vue";
 import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store/modules/adk.store";
 import { backendService } from "@/api/adk.service";
+import { createPollingController } from "@/views/adk/utils";
+import type { PollingController } from "@/views/adk/utils";
 import {
   ElDrawer,
   ElCard,
@@ -55,6 +57,12 @@ interface TaskItem {
 
 const taskList = ref<TaskItem[]>([]);
 const loading = ref(false);
+const taskPolling = ref<PollingController | null>(null);
+
+// 检查是否有运行中的任务
+const hasRunningTasks = (): boolean => {
+  return taskList.value.some(task => task.status === "running");
+};
 
 const fetchTasks = async () => {
   if (!currentSession.value?.id) return;
@@ -83,6 +91,11 @@ const fetchTasks = async () => {
       timestamp: item.created_at ? new Date(item.created_at).getTime() : 0,
       details: item
     }));
+
+    // 如果面板打开且没有运行中的任务，停止轮询
+    if (visible.value && !hasRunningTasks()) {
+      stopTaskPolling();
+    }
   } catch (error) {
     console.error("Failed to fetch tasks:", error);
     taskList.value = [];
@@ -91,15 +104,54 @@ const fetchTasks = async () => {
   }
 };
 
+// 启动任务轮询
+const startTaskPolling = () => {
+  if (!visible.value || !currentSession.value?.id) return;
+
+  // 如果已经有轮询在运行，先停止
+  stopTaskPolling();
+
+  taskPolling.value = createPollingController({
+    task: async () => {
+      await fetchTasks();
+    },
+    interval: 3000, // 每3秒刷新一次
+    immediate: false, // 不立即执行，因为已经在打开时执行了一次
+    autoStart: true
+  });
+};
+
+// 停止任务轮询
+const stopTaskPolling = () => {
+  if (taskPolling.value) {
+    taskPolling.value.stop();
+    taskPolling.value = null;
+  }
+};
+
 watch(
   () => visible.value,
   val => {
     if (val) {
-      fetchTasks();
+      // 面板打开时，先获取一次任务列表
+      fetchTasks().then(() => {
+        // 如果有运行中的任务，启动轮询
+        if (hasRunningTasks()) {
+          startTaskPolling();
+        }
+      });
+    } else {
+      // 面板关闭时，停止轮询
+      stopTaskPolling();
     }
   },
   { immediate: true }
 );
+
+// 组件卸载时清理轮询
+onBeforeUnmount(() => {
+  stopTaskPolling();
+});
 
 const tasks = computed(() => taskList.value);
 
@@ -201,7 +253,7 @@ const killTask = async (task: TaskItem) => {
     size="520px"
     class="task-board-drawer"
     resizable
-    :modal="false"
+    :modal="true"
   >
     <div class="task-board-container">
       <div class="header-info">
@@ -241,7 +293,7 @@ const killTask = async (task: TaskItem) => {
                       ><Loading
                     /></el-icon>
                   </el-tag>
-                  <!-- <el-button
+                  <el-button
                     v-if="task.status === 'running'"
                     type="danger"
                     size="small"
@@ -251,7 +303,7 @@ const killTask = async (task: TaskItem) => {
                     @click.stop="killTask(task)"
                   >
                     终止
-                  </el-button> -->
+                  </el-button>
                 </div>
               </div>
             </template>

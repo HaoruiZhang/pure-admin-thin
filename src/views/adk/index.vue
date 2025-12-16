@@ -48,7 +48,9 @@ function bindEventHandlers() {
       case "startRunTask":
         adkStore.startSessionPolling(6);
         break;
-
+      case "startQueryFormRes":
+        adkStore.startSessionPolling(7, 600);
+        break;
       case "task-state":
         const state = event.data.state;
         if (["error", "noLogin"].includes(state)) {
