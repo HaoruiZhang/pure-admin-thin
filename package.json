@@ -11,6 +11,7 @@
     "build:test": "rimraf dist && vite build --mode test",
     "build:prod": "rimraf dist && vite build --mode production",
     "build:research": "rimraf dist && vite build --mode research",
+    "build:research169": "rimraf dist && vite build --mode research169",
     "build:research8028": "rimraf dist && vite build --mode research8028",
     "serve": "pnpm dev",
     "build:staging": "rimraf dist && vite build --mode staging",
