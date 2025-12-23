@@ -301,7 +301,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
       });
       const tasksData = res?.data?.tasks || [];
       const hasRunningTask = tasksData.some((task: any) => {
-        return task.status !== "DONE" || task.status_ai !== "DONE";
+        return (
+          !["DONE", "FAIL"].includes(task.status) || task.status_ai !== "DONE"
+        );
       });
       console.log("❓️ checkTaskRunning: ", hasRunningTask);
       return hasRunningTask;
