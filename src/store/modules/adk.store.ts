@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import type { Ref } from "vue";
 import { nextTick } from "vue";
+import { ElMessageBox } from "element-plus";
 import type { AdkSession } from "@/types/adk";
 import {
   getNewSession,
@@ -852,7 +853,26 @@ export const useADKChatStore = defineStore("adkChatStore", {
           }
           // 处理
         },
-        err => console.error(err),
+        err => {
+          console.error(err);
+          ElMessageBox.confirm(err, "Error", {
+            confirmButtonText: "OK",
+            type: "error",
+            center: true
+          })
+            .then(() => {
+              // ElMessage({
+              //   type: "success",
+              //   message: "Delete completed"
+              // });
+            })
+            .catch(() => {
+              // ElMessage({
+              //   type: "info",
+              //   message: "Delete canceled"
+              // });
+            });
+        },
         // complete 回调
         async () => {
           this.sendLoading = false;
@@ -865,6 +885,12 @@ export const useADKChatStore = defineStore("adkChatStore", {
           if (sessionDetail) {
             this.currentSession = sessionDetail;
             this.lastSessionSyncTime = sessionDetail.lastUpdateTime;
+            for (let i = 0; i < this.sessionList.length; i++) {
+              const session = this.sessionList[i];
+              if (session.id === sessionDetail.id) {
+                session.state.title = sessionDetail.state?.title;
+              }
+            }
           }
           window.parent.postMessage(
             {
