@@ -24,7 +24,7 @@ interface SSEController {
 }
 interface adkChatState {
   sseController: SSEController | null;
-  userInput: "";
+  userInput: string;
   selectedFiles?: { file: File; url: string }[];
   streamingTextMessage: any | null;
   isModelThinkingSubject: boolean;
@@ -837,6 +837,13 @@ export const useADKChatStore = defineStore("adkChatStore", {
         chunk => {
           if (chunk.startsWith('{"error"')) {
             console.log("error", chunk);
+            ElMessageBox.confirm(chunk, "Error", {
+              confirmButtonText: "OK",
+              type: "error",
+              center: true
+            })
+              .then(() => {})
+              .catch(() => {});
             return;
           }
           const chunkJson = JSON.parse(chunk);
