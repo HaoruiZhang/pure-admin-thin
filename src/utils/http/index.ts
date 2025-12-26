@@ -237,6 +237,6 @@ export const adkHttp = new PureHttp({
 });
 export const taskHttp = new PureHttp({
   ...defaultConfig,
-  baseURL: `${import.meta.env.VITE_URL_HOST}:38765/tasks`,
+  baseURL: `${import.meta.env.VITE_URL_HOST}:38765`,
   withCredentials: false
 });

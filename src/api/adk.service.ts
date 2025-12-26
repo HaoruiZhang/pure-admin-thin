@@ -223,7 +223,18 @@ export const taskService = {
     invocation_id: string;
     task_index?: number;
   }) => {
-    return taskHttp.request("post", `rerun`, { data });
+    return taskHttp.request("post", `tasks/rerun`, { data });
+  },
+
+  deleteInvocation: (
+    user_id: string,
+    sessionId: string,
+    invocationId: string
+  ) => {
+    return taskHttp.request(
+      "delete",
+      `/sessions/${sessionId}/invocations/${invocationId}?user_id=${user_id}`
+    );
   }
 };
 

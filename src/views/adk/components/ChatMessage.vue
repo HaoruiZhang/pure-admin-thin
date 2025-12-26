@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref, nextTick, onUnmounted, watch } from "vue";
 import { storeToRefs } from "pinia";
+import { ElMessage } from "element-plus";
+import { taskService } from "@/api/adk.service";
+import { Edit } from "@element-plus/icons-vue";
 import { md } from "../utils/markdown";
 import { onCopyDom, onRunDom } from "../utils";
 import { useADKChatStore } from "@/store/modules/adk.store";
@@ -34,6 +37,58 @@ const COLLAPSE_PREVIEW_LENGTH = 1200; // 预览长度
 const expandedMessageKeys = ref<Set<string>>(new Set());
 const expandedFunctionCalls = ref<Set<string>>(new Set());
 const markdownCache = new Map<string, { text: string; html: string }>();
+
+// 编辑相关状态
+const editingMessageIndex = ref<number | null>(null);
+const editingText = ref<string>("");
+const originalText = ref<string>("");
+
+// 开始编辑消息
+const startEditMessage = (index: number, text: string) => {
+  editingMessageIndex.value = index;
+  editingText.value = text;
+  originalText.value = text;
+};
+
+// 取消编辑
+const cancelEditMessage = () => {
+  editingMessageIndex.value = null;
+  editingText.value = "";
+  originalText.value = "";
+};
+
+// 确认编辑并重新发送
+const confirmEditMessage = async (index: number) => {
+  if (!editingText.value.trim()) return;
+
+  // 保存编辑的文本
+  const newText = editingText.value;
+  try {
+    const deleteRes: any = await taskService.deleteInvocation(
+      user_info.value.user_id,
+      currentSession.value.id,
+      messageList.value[index].invocationId
+    );
+    if (deleteRes && deleteRes.success) {
+      // 删除该消息及其后的所有消息（因为 sendMessage2 会添加新的用户消息）
+      messageList.value.splice(index);
+
+      // 设置用户输入
+      adkStore.userInput = newText;
+
+      // 重置编辑状态
+      cancelEditMessage();
+
+      // 重新发送消息
+      await adkStore.sendMessage2();
+    } else {
+      ElMessage.error(deleteRes.message);
+    }
+  } catch (error) {
+    console.error(error);
+    ElMessage.error(error);
+  }
+};
 
 const getMessageKey = (item: any, index: number) => {
   if (item?.eventId) return String(item.eventId);
@@ -655,36 +710,81 @@ onUnmounted(() => {
                 v-if="item.text && !item.formConfig && !item.taskInfo"
                 class="message-content"
               >
+                <!-- 用户消息编辑模式 -->
                 <div
-                  :class="[
-                    'message-html',
-                    { collapsed: isMessageCollapsed(item, index) }
-                  ]"
+                  v-if="item.role === 'user' && editingMessageIndex === index"
+                  class="edit-message-wrapper"
                 >
-                  <div
-                    v-if="isMessageCollapsed(item, index)"
-                    class="message-html-inner"
-                    v-html="getCollapsedPreviewHtml(item, index)"
+                  <el-input
+                    v-model="editingText"
+                    type="textarea"
+                    :autosize="{ minRows: 2, maxRows: 10 }"
+                    class="edit-textarea"
+                    placeholder="编辑消息..."
+                    @keydown.enter.ctrl="confirmEditMessage(index)"
                   />
-                  <div
-                    v-else
-                    class="message-html-inner"
-                    v-html="getFullContentHtml(item, index)"
-                  />
-                  <div
-                    v-if="isMessageCollapsed(item, index)"
-                    class="message-html-gradient"
-                  />
+                  <div class="edit-actions">
+                    <el-button size="small" @click="cancelEditMessage">
+                      Cancel
+                    </el-button>
+                    <el-button
+                      size="small"
+                      type="primary"
+                      :disabled="!editingText.trim()"
+                      @click="confirmEditMessage(index)"
+                    >
+                      Send
+                    </el-button>
+                  </div>
                 </div>
-                <el-button
-                  v-if="shouldCollapseText(item.text)"
-                  class="collapse-btn"
-                  link
-                  type="primary"
-                  @click="toggleMessageCollapse(item, index)"
-                >
-                  {{ isMessageCollapsed(item, index) ? "展开全部" : "收起" }}
-                </el-button>
+                <!-- 正常显示模式 -->
+                <template v-else>
+                  <div
+                    :class="[
+                      'message-html',
+                      { collapsed: isMessageCollapsed(item, index) }
+                    ]"
+                  >
+                    <div
+                      v-if="isMessageCollapsed(item, index)"
+                      class="message-html-inner"
+                      v-html="getCollapsedPreviewHtml(item, index)"
+                    />
+                    <div
+                      v-else
+                      class="message-html-inner"
+                      v-html="getFullContentHtml(item, index)"
+                    />
+                    <div
+                      v-if="isMessageCollapsed(item, index)"
+                      class="message-html-gradient"
+                    />
+                  </div>
+                  <div class="message-actions-row">
+                    <el-button
+                      v-if="shouldCollapseText(item.text)"
+                      class="collapse-btn"
+                      link
+                      type="primary"
+                      @click="toggleMessageCollapse(item, index)"
+                    >
+                      {{
+                        isMessageCollapsed(item, index) ? "展开全部" : "收起"
+                      }}
+                    </el-button>
+                    <!-- 用户消息编辑按钮 -->
+                    <!-- <el-button
+                      v-if="item.role === 'user' && !sendLoading"
+                      class="edit-btn"
+                      link
+                      type="primary"
+                      @click.stop="startEditMessage(index, item.text)"
+                    >
+                      <el-icon><Edit /></el-icon>
+                      编辑
+                    </el-button> -->
+                  </div>
+                </template>
               </div>
 
               <!--内联图片-->
@@ -713,6 +813,21 @@ onUnmounted(() => {
               <div v-if="item.formConfig">Check form config</div>
               <!-- 任务信息 -->
               <div v-if="item.taskInfo">View task info</div>
+              <div class="message-actions-row-margin">
+                <el-button
+                  v-if="
+                    item.role === 'user' &&
+                    !sendLoading &&
+                    editingMessageIndex !== index
+                  "
+                  class="edit-btn"
+                  link
+                  type="primary"
+                  @click.stop="startEditMessage(index, item.text)"
+                >
+                  <el-icon><Edit /></el-icon>
+                </el-button>
+              </div>
             </div>
             <div class="mat-col user-mat">
               <el-button v-if="false && item.role === 'user'">User </el-button>
@@ -796,6 +911,7 @@ onUnmounted(() => {
       }
 
       .content-box {
+        position: relative;
         max-width: calc(100% - 196px);
         padding: 12px 16px;
 
@@ -838,6 +954,27 @@ onUnmounted(() => {
           color: var(--el-color-primary);
         }
 
+        .message-actions-row-margin {
+          position: absolute;
+          right: 4px;
+          bottom: -20px;
+
+          .edit-btn {
+            padding: 0;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.2s;
+
+            .el-icon {
+              margin-right: 2px;
+            }
+          }
+        }
+
+        &:hover .edit-btn {
+          opacity: 1;
+        }
+
         .message-content {
           display: flex;
           flex-direction: column;
@@ -845,6 +982,51 @@ onUnmounted(() => {
 
           .inline-data-content:hover {
             cursor: pointer;
+          }
+
+          .message-actions-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+          }
+
+          .edit-btn {
+            padding: 0;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+
+            .el-icon {
+              margin-right: 2px;
+            }
+          }
+
+          &:hover .edit-btn {
+            opacity: 1;
+          }
+
+          .edit-message-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+
+            .edit-textarea {
+              width: 100%;
+
+              :deep(.el-textarea__inner) {
+                font-family: inherit;
+                font-size: 14px;
+                line-height: 1.5;
+                resize: none;
+              }
+            }
+
+            .edit-actions {
+              display: flex;
+              gap: 8px;
+              justify-content: flex-end;
+            }
           }
         }
 
