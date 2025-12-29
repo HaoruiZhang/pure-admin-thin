@@ -67,7 +67,8 @@ const confirmEditMessage = async (index: number) => {
     const deleteRes: any = await taskService.deleteInvocation(
       user_info.value.user_id,
       currentSession.value.id,
-      messageList.value[index].invocationId
+      messageList.value[index].invocationId ??
+        messageList.value[index + 1].invocationId
     );
     if (deleteRes && deleteRes.success) {
       // 删除该消息及其后的所有消息（因为 sendMessage2 会添加新的用户消息）
@@ -962,7 +963,8 @@ onUnmounted(() => {
           .edit-btn {
             padding: 0;
             font-size: 14px;
-            opacity: 0;
+
+            /* opacity: 0; */
             transition: opacity 0.2s;
 
             .el-icon {

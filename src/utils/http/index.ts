@@ -221,12 +221,16 @@ class PureHttp {
     return this.request<T>("get", url, params, config);
   }
 }
-
+console.log(
+  "🤪🤪🤪🤪🤪 agentHttp[adk]",
+  import.meta.env.VITE_ENV_MODE + ":backendUrl",
+  localStorage.getItem(import.meta.env.VITE_ENV_MODE + ":backendUrl")
+);
 export const http = new PureHttp();
 export const agentHttp = new PureHttp({
   ...defaultConfig,
   baseURL:
-    localStorage.getItem("backendUrl") ||
+    localStorage.getItem(import.meta.env.VITE_ENV_MODE + ":backendUrl") ||
     import.meta.env.VITE_URL_AGENT_BACKEND,
   withCredentials: false
 });
