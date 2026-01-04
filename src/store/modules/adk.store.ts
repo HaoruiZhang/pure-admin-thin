@@ -117,6 +117,12 @@ export const useADKChatStore = defineStore("adkChatStore", {
       this.token = token;
       localStorage?.setItem("stag:token", token);
     },
+    setBackendUrl(backendUrl: string) {
+      localStorage?.setItem(
+        import.meta.env.VITE_ENV_MODE + ":backendUrl",
+        backendUrl
+      );
+    },
     getToken() {
       return this.token;
     },

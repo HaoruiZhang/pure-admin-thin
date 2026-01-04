@@ -234,9 +234,10 @@ export const agentHttp = new PureHttp({
     import.meta.env.VITE_URL_AGENT_BACKEND,
   withCredentials: false
 });
+
 export const adkHttp = new PureHttp({
   ...defaultConfig,
-  baseURL: import.meta.env.VITE_URL_ADK_BACKEND,
+  baseURL: import.meta.env.VITE_URL_ADK_HOST,
   withCredentials: false
 });
 export const taskHttp = new PureHttp({

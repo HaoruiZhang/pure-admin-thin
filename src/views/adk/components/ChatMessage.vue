@@ -1326,6 +1326,8 @@ onUnmounted(() => {
 }
 </style>
 <style scoped>
+
+
 @keyframes dotting {
   25% {
     box-shadow: 4px 0 0 #333;
@@ -1384,6 +1386,12 @@ onUnmounted(() => {
   100% {
     visibility: visible;
   }
+}
+
+a:any-link {
+  color: -webkit-link;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 :deep(*) {

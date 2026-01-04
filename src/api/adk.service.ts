@@ -125,7 +125,7 @@ export const adkService = {
     const isLoading = ref(false);
 
     async function* gen(): AsyncGenerator<string, void, void> {
-      const url = `${import.meta.env.VITE_URL_ADK_BACKEND}/run_sse`;
+      const url = `${import.meta.env.VITE_URL_ADK_HOST}/run_sse`;
       isLoading.value = true;
       let response: Response | null = null;
       try {

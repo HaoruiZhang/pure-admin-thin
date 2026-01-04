@@ -26,9 +26,10 @@ defineOptions({
   name: "ADK"
 });
 function init() {
-  const { userId, token } = parseUrlParams();
+  const { userId, token, backendUrl } = parseUrlParams();
   userId && adkStore.setUserId(userId);
   token && adkStore.setToken(token);
+  backendUrl && adkStore.setBackendUrl(backendUrl);
   adkStore.getSessionList();
   adkStore.getListReady.then(async () => {
     // filterSessionListFromBackend 已在 getSessionList 内部调用，无需重复
@@ -128,10 +129,12 @@ function parseUrlParams() {
     const hashQuery = hash.includes("?") ? hash.split("?")[1] : "";
     searchParams = new URLSearchParams(hashQuery);
   }
+  console.log("searchParams", searchParams, searchParams.get("backendUrl"));
   return {
     userId: searchParams.get("userId"),
     sessionId: searchParams.get("session"),
-    token: searchParams.get("token")
+    token: searchParams.get("token"),
+    backendUrl: searchParams.get("backendUrl")
   };
 }
 
