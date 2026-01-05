@@ -18,7 +18,8 @@ const {
   operatingFormIndex,
   userFormConfig,
   backendSessionList,
-  needToFilterSessionList
+  needToFilterSessionList,
+  loginInfo
 } = storeToRefs(adkStore);
 
 const emit = defineEmits(["getDetail"]);
@@ -112,6 +113,14 @@ function bindEventHandlers() {
           // filterSessionListFromBackend 已在 getSessionList 内部调用，无需重复
           await handleSessionAfterFilter();
         });
+        break;
+      case "loginRemoter":
+        loginInfo.value.remoter = event.data.remoter;
+        loginInfo.value.userName = event.data?.userName || "";
+        break;
+      case "logout":
+        loginInfo.value.remoter = "";
+        loginInfo.value.userName = "";
         break;
       default:
         break;

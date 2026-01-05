@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, nextTick, onUnmounted, watch } from "vue";
+import mermaid from "mermaid";
+
 import { storeToRefs } from "pinia";
 import { ElMessage } from "element-plus";
 import { taskService } from "@/api/adk.service";
@@ -7,7 +9,6 @@ import { Edit } from "@element-plus/icons-vue";
 import { md } from "../utils/markdown";
 import { onCopyDom, onRunDom } from "../utils";
 import { useADKChatStore } from "@/store/modules/adk.store";
-import mermaid from "mermaid";
 const adkStore = useADKChatStore();
 const {
   messageList,
@@ -16,7 +17,8 @@ const {
   operatingFormEventId,
   operatingFormIndex,
   user_info,
-  isDebugMode
+  isDebugMode,
+  loginInfo
 } = storeToRefs(adkStore);
 defineOptions({
   name: "ADK-ChatMessage"
@@ -813,7 +815,9 @@ onUnmounted(() => {
               <!-- 表单配置 -->
               <div v-if="item.formConfig">Check form config</div>
               <!-- 任务信息 -->
-              <div v-if="item.taskInfo">View task info</div>
+              <div v-if="item.taskInfo && loginInfo.remoter">
+                View task info
+              </div>
               <div class="message-actions-row-margin">
                 <el-button
                   v-if="
@@ -1326,8 +1330,6 @@ onUnmounted(() => {
 }
 </style>
 <style scoped>
-
-
 @keyframes dotting {
   25% {
     box-shadow: 4px 0 0 #333;

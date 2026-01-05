@@ -62,6 +62,10 @@ interface adkChatState {
   isDebugMode: boolean;
   needToFilterSessionList: boolean;
   token: string;
+  loginInfo?: {
+    remoter?: string;
+    userName?: string;
+  };
   autoScrollDownDisabled: boolean; // 为true时，禁止自动滚动
   isProgrammaticScroll: boolean; // 判断是否代码控制滚动
 }
@@ -95,6 +99,10 @@ export const useADKChatStore = defineStore("adkChatStore", {
     userSpecifiedPath: "",
     user_info: {
       user_id: localStorage?.getItem("stag:user_id") || "user"
+    },
+    loginInfo: {
+      remoter: "",
+      userName: ""
     },
     redirectUri: URLUtil.getBaseUrlWithoutPath(),
     functionCallEventId: "",
