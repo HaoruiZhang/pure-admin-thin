@@ -567,7 +567,8 @@ onUnmounted(() => {
             v-if="
               !(
                 (item.text && item.text.startsWith('<backend-reply-start>')) ||
-                item.functionResponse
+                item.functionResponse ||
+                (item.taskInfo && !loginInfo.remoter)
               )
             "
             :ref="
@@ -815,9 +816,7 @@ onUnmounted(() => {
               <!-- 表单配置 -->
               <div v-if="item.formConfig">Check form config</div>
               <!-- 任务信息 -->
-              <div v-if="item.taskInfo && loginInfo.remoter">
-                View task info
-              </div>
+              <div v-if="item.taskInfo">View task info</div>
               <div class="message-actions-row-margin">
                 <el-button
                   v-if="
