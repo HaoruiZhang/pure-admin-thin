@@ -143,12 +143,12 @@ export function formatBase64Data(data: string, mimeType: string) {
 
 export function extractScriptContent(str: string) {
   const startTag = "```";
-  const endTag = "\n```";
+  const endTag = "```";
   const startIndex = str.indexOf(startTag);
-  if (startIndex === -1) return null; // 未找到开始标记
+  if (startIndex === -1) return { language: "text", content: str }; // 未找到开始标记
   const contentStartIndex = startIndex + startTag.length;
   const endIndex = str.indexOf(endTag, contentStartIndex);
-  if (endIndex === -1) return null; // 未找到结束标记
+  if (endIndex === -1) return { language: "text", content: str }; // 未找到结束标记
 
   const rawContent = str.substring(contentStartIndex, endIndex);
   const firstNewLineIndex = rawContent.indexOf("\n");

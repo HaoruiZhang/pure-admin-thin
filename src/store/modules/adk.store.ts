@@ -568,12 +568,12 @@ export const useADKChatStore = defineStore("adkChatStore", {
               message,
               { ...message, formConfig: { name: "Analysis Form" } }
             ]);
+          } else {
+            this.insertMessageBeforeLoadingMessage([message]);
           }
         } else if (part.text.includes("```")) {
-          const extracted = extractScriptContent(part.text);
-          if (extracted) {
-            // const { language, content } = extracted;
-            // console.log('---- 脚本内容: ', content);
+          const { language } = extractScriptContent(part.text);
+          if (["python", "r", "bash"].includes(language)) {
             // console.log('---- this.sessionId: ', this.sessionId, window.sessionStorage.getItem('sessionId'));
             this.isUserNewMessage && this.startSessionPolling(2);
             //   window.parent.postMessage(
@@ -607,9 +607,10 @@ export const useADKChatStore = defineStore("adkChatStore", {
                 }
               }
             ]);
+          } else {
+            this.insertMessageBeforeLoadingMessage([message]);
           }
         } else {
-          // console.log('---- 普通文本消息，插入消息:', message);
           this.insertMessageBeforeLoadingMessage(message);
         }
         return;
