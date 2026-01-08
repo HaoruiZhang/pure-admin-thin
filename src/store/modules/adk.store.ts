@@ -24,6 +24,7 @@ interface SSEController {
 }
 interface adkChatState {
   sseController: SSEController | null;
+  hideMessageText: string[];
   userInput: string;
   selectedFiles?: { file: File; url: string }[];
   streamingTextMessage: any | null;
@@ -73,6 +74,7 @@ interface adkChatState {
 export const useADKChatStore = defineStore("adkChatStore", {
   state: (): adkChatState => ({
     sseController: null,
+    hideMessageText: ["表单已完成，请继续"],
     token: "",
     specifiedMimePath: "",
     latestThought: "",
@@ -812,18 +814,20 @@ export const useADKChatStore = defineStore("adkChatStore", {
       }
     },
 
-    async sendMessage2() {
+    async sendMessage2(autoInput = false) {
+      const newUserInput = autoInput
+        ? this.hideMessageText[0]
+        : this.userInput.trim();
+      if (!newUserInput && this.selectedFiles?.length <= 0) return;
       this.stopSessionPolling();
       this.sendLoading = true;
-      if (!this.userInput.trim() && this.selectedFiles?.length <= 0) return;
-
       if (this.updateSessionInterval) {
         clearInterval(this.updateSessionInterval);
         this.updateSessionInterval = null;
       }
       // Add user message
-      if (!!this.userInput.trim()) {
-        this.messageList.push({ role: "user", text: this.userInput });
+      if (!!newUserInput) {
+        this.messageList.push({ role: "user", text: newUserInput });
         this.isUserNewMessage = true;
       }
       // Add user message attachments
@@ -844,7 +848,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           appName: this.currentSession.appName,
           userId: this.currentSession.userId,
           sessionId: this.currentSession.id,
-          newMessage: { role: "user", parts: [{ text: this.userInput }] },
+          newMessage: { role: "user", parts: [{ text: newUserInput }] },
           streaming: true,
           stateDelta: null
         },
@@ -936,7 +940,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           }
         }
       );
-      this.userInput = "";
+      !autoInput && (this.userInput = "");
     },
     processPart(
       chunkJson: any,

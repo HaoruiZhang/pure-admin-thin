@@ -566,9 +566,14 @@ onUnmounted(() => {
           <div
             v-if="
               !(
-                (item.text && item.text.startsWith('<backend-reply-start>')) ||
-                item.functionResponse ||
-                (item.taskInfo && !loginInfo.remoter)
+                //括号里的条件不显示在面板上
+                (
+                  (item.text &&
+                    item.text.startsWith('<backend-reply-start>')) ||
+                  item.functionResponse ||
+                  (item.taskInfo && !loginInfo.remoter) ||
+                  (item.text && adkStore.hideMessageText.includes(item.text))
+                )
               )
             "
             :ref="

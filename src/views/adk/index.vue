@@ -91,14 +91,7 @@ function bindEventHandlers() {
               messageList.value[
                 operatingFormIndex.value - 1
               ].userFormConfig[0] = event.data.data;
-              window.parent.postMessage(
-                {
-                  key: "modified-event-success",
-                  type: "_modified-event-success",
-                  sessionId: currentSession.value.id
-                },
-                "*"
-              );
+              adkStore.sendMessage2(true);
             }
           });
         break;
