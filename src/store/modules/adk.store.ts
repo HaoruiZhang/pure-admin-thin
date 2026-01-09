@@ -883,23 +883,23 @@ export const useADKChatStore = defineStore("adkChatStore", {
         },
         err => {
           console.error(err);
-          ElMessageBox.confirm(err, "Error", {
-            confirmButtonText: "OK",
-            type: "error",
-            center: true
-          })
-            .then(() => {
-              // ElMessage({
-              //   type: "success",
-              //   message: "Delete completed"
-              // });
-            })
-            .catch(() => {
-              // ElMessage({
-              //   type: "info",
-              //   message: "Delete canceled"
-              // });
-            });
+          // ElMessageBox.confirm(err, "Error", {
+          //   confirmButtonText: "OK",
+          //   type: "error",
+          //   center: true
+          // })
+          //   .then(() => {
+          //     // ElMessage({
+          //     //   type: "success",
+          //     //   message: "Delete completed"
+          //     // });
+          //   })
+          //   .catch(() => {
+          //     // ElMessage({
+          //     //   type: "info",
+          //     //   message: "Delete canceled"
+          //     // });
+          //   });
         },
         // complete 回调
         async () => {
