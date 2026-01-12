@@ -321,3 +321,53 @@ md.renderer.rules.table_open = function () {
 md.renderer.rules.table_close = function () {
   return "</table></div>";
 };
+
+// 自定义链接渲染，使其在新窗口打开
+const defaultLinkOpen =
+  md.renderer.rules.link_open ||
+  function (tokens, idx, options, env, self) {
+    return self.renderToken(tokens, idx, options);
+  };
+md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
+  const token = tokens[idx];
+  const hrefIndex = token.attrIndex("href");
+  if (hrefIndex >= 0) {
+    const href = token.attrs?.[hrefIndex]?.[1];
+    // 只对外部链接添加 target="_blank"，内部链接（锚点等）保持原样
+    if (
+      href &&
+      (href.startsWith("http://") ||
+        href.startsWith("https://") ||
+        href.startsWith("//"))
+    ) {
+      token.attrSet("target", "_blank");
+      token.attrSet("rel", "noopener noreferrer");
+    }
+  }
+  return defaultLinkOpen(tokens, idx, options, env, self);
+};
+
+// 同样为 mdNoBtn 添加链接新窗口打开功能
+const defaultLinkOpenNoBtn =
+  mdNoBtn.renderer.rules.link_open ||
+  function (tokens, idx, options, env, self) {
+    return self.renderToken(tokens, idx, options);
+  };
+mdNoBtn.renderer.rules.link_open = function (tokens, idx, options, env, self) {
+  const token = tokens[idx];
+  const hrefIndex = token.attrIndex("href");
+  if (hrefIndex >= 0) {
+    const href = token.attrs?.[hrefIndex]?.[1];
+    // 只对外部链接添加 target="_blank"，内部链接（锚点等）保持原样
+    if (
+      href &&
+      (href.startsWith("http://") ||
+        href.startsWith("https://") ||
+        href.startsWith("//"))
+    ) {
+      token.attrSet("target", "_blank");
+      token.attrSet("rel", "noopener noreferrer");
+    }
+  }
+  return defaultLinkOpenNoBtn(tokens, idx, options, env, self);
+};

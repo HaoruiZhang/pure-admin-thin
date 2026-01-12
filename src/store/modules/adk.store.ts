@@ -24,6 +24,7 @@ interface SSEController {
 }
 interface adkChatState {
   sseController: SSEController | null;
+  hideMessageText: string[];
   userInput: string;
   selectedFiles?: { file: File; url: string }[];
   streamingTextMessage: any | null;
@@ -62,6 +63,10 @@ interface adkChatState {
   isDebugMode: boolean;
   needToFilterSessionList: boolean;
   token: string;
+  loginInfo?: {
+    remoter?: string;
+    userName?: string;
+  };
   autoScrollDownDisabled: boolean; // 为true时，禁止自动滚动
   isProgrammaticScroll: boolean; // 判断是否代码控制滚动
 }
@@ -69,6 +74,7 @@ interface adkChatState {
 export const useADKChatStore = defineStore("adkChatStore", {
   state: (): adkChatState => ({
     sseController: null,
+    hideMessageText: ["表单已完成，请继续"],
     token: "",
     specifiedMimePath: "",
     latestThought: "",
@@ -96,6 +102,10 @@ export const useADKChatStore = defineStore("adkChatStore", {
     user_info: {
       user_id: localStorage?.getItem("stag:user_id") || "user"
     },
+    loginInfo: {
+      remoter: "",
+      userName: ""
+    },
     redirectUri: URLUtil.getBaseUrlWithoutPath(),
     functionCallEventId: "",
     getListReady: new AccessiblePromise<void>(),
@@ -116,6 +126,12 @@ export const useADKChatStore = defineStore("adkChatStore", {
     setToken(token: string) {
       this.token = token;
       localStorage?.setItem("stag:token", token);
+    },
+    setBackendUrl(backendUrl: string) {
+      localStorage?.setItem(
+        import.meta.env.VITE_ENV_MODE + ":backendUrl",
+        backendUrl
+      );
     },
     getToken() {
       return this.token;
@@ -799,18 +815,20 @@ export const useADKChatStore = defineStore("adkChatStore", {
       }
     },
 
-    async sendMessage2() {
+    async sendMessage2(autoInput = false) {
+      const newUserInput = autoInput
+        ? this.hideMessageText[0]
+        : this.userInput.trim();
+      if (!newUserInput && this.selectedFiles?.length <= 0) return;
       this.stopSessionPolling();
       this.sendLoading = true;
-      if (!this.userInput.trim() && this.selectedFiles?.length <= 0) return;
-
       if (this.updateSessionInterval) {
         clearInterval(this.updateSessionInterval);
         this.updateSessionInterval = null;
       }
       // Add user message
-      if (!!this.userInput.trim()) {
-        this.messageList.push({ role: "user", text: this.userInput });
+      if (!!newUserInput) {
+        this.messageList.push({ role: "user", text: newUserInput });
         this.isUserNewMessage = true;
       }
       // Add user message attachments
@@ -831,7 +849,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           appName: this.currentSession.appName,
           userId: this.currentSession.userId,
           sessionId: this.currentSession.id,
-          newMessage: { role: "user", parts: [{ text: this.userInput }] },
+          newMessage: { role: "user", parts: [{ text: newUserInput }] },
           streaming: true,
           stateDelta: null
         },
@@ -923,7 +941,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           }
         }
       );
-      this.userInput = "";
+      !autoInput && (this.userInput = "");
     },
     processPart(
       chunkJson: any,

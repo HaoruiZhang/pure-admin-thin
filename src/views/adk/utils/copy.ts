@@ -1,10 +1,10 @@
 // import i18n from "@/locales";
-import { ElMessage } from "element-plus";
+// import { ElMessage } from "element-plus";
 // import { showSuccessToast } from "vant";
 import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store/modules/adk.store";
 import { getParentEventId, getParentInvocationId } from ".";
-import { taskService } from "@/api/adk.service";
+// import { taskService } from "@/api/adk.service";
 
 export const onCopy = (text: string, tooltip?: string) => {
   const oInput = document.createElement("input");
@@ -48,24 +48,35 @@ export const onRunDom = async (node: any) => {
   const invocationId = getParentInvocationId(node);
   const { currentSession } = storeToRefs(adkStore);
 
-  console.log("获取的代码内容\n", content, "\n invocationId\n", invocationId);
-  try {
-    const res: any = await taskService.rerunTask({
+  console.log("获取的代码内容\n", content, "\n invocationId: ", invocationId);
+  // try {
+  //   const res: any = await taskService.rerunTask({
+  //     user_id: adkStore.user_info?.user_id,
+  //     session_id: currentSession.value.id,
+  //     invocation_id: invocationId
+  //   });
+  //   if (res.success) {
+  //     ElMessage.success("任务已重新运行");
+  //     adkStore.startSessionPolling(11);
+  //   } else {
+  //     ElMessage.error("任务重新运行失败");
+  //   }
+  // } catch (error) {
+  //   console.error("任务重新运行失败", error);
+  //   ElMessage.error("任务重新运行失败");
+  //   return;
+  // }
+
+  window.parent.postMessage(
+    {
+      key: "workflowContent",
+      type: "workflowContent",
       user_id: adkStore.user_info?.user_id,
       session_id: currentSession.value.id,
       invocation_id: invocationId
-    });
-    if (res.success) {
-      ElMessage.success("任务已重新运行");
-      adkStore.startSessionPolling(11);
-    } else {
-      ElMessage.error("任务重新运行失败");
-    }
-  } catch (error) {
-    console.error("任务重新运行失败", error);
-    ElMessage.error("任务重新运行失败");
-    return;
-  }
+    },
+    "*"
+  );
 };
 
 export const onRunDom_raw = (node: any) => {

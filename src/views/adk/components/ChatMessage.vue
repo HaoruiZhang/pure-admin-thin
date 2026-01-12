@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, nextTick, onUnmounted, watch } from "vue";
+import mermaid from "mermaid";
+
 import { storeToRefs } from "pinia";
 import { ElMessage } from "element-plus";
 import { taskService } from "@/api/adk.service";
@@ -7,7 +9,6 @@ import { Edit } from "@element-plus/icons-vue";
 import { md } from "../utils/markdown";
 import { onCopyDom, onRunDom } from "../utils";
 import { useADKChatStore } from "@/store/modules/adk.store";
-import mermaid from "mermaid";
 const adkStore = useADKChatStore();
 const {
   messageList,
@@ -16,7 +17,8 @@ const {
   operatingFormEventId,
   operatingFormIndex,
   user_info,
-  isDebugMode
+  isDebugMode,
+  loginInfo
 } = storeToRefs(adkStore);
 defineOptions({
   name: "ADK-ChatMessage"
@@ -564,8 +566,14 @@ onUnmounted(() => {
           <div
             v-if="
               !(
-                (item.text && item.text.startsWith('<backend-reply-start>')) ||
-                item.functionResponse
+                //括号里的条件不显示在面板上
+                (
+                  (item.text &&
+                    item.text.startsWith('<backend-reply-start>')) ||
+                  item.functionResponse ||
+                  (item.taskInfo && !loginInfo.remoter) ||
+                  (item.text && adkStore.hideMessageText.includes(item.text))
+                )
               )
             "
             :ref="
@@ -1384,6 +1392,12 @@ onUnmounted(() => {
   100% {
     visibility: visible;
   }
+}
+
+a:any-link {
+  color: -webkit-link;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 :deep(*) {

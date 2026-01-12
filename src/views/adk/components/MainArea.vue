@@ -14,7 +14,8 @@ const {
   eventData,
   isDebugMode,
   user_info,
-  sessionList
+  sessionList,
+  loginInfo
 } = storeToRefs(adkStore);
 
 const showTaskBoard = ref(false);
@@ -94,7 +95,12 @@ const handleDeleteSession = async () => {
         </el-affix>
       </div>
       <div class="action-buttons">
-        <el-button link title="任务看板" @click="showTaskBoard = true">
+        <el-button
+          v-if="loginInfo.remoter"
+          link
+          title="任务看板"
+          @click="showTaskBoard = true"
+        >
           <el-icon :size="20"><Tickets /></el-icon>
         </el-button>
         <el-button link title="删除会话" @click="handleDeleteSession">
