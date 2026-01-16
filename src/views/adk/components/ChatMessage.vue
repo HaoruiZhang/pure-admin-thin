@@ -190,10 +190,12 @@ const cacheMarkdown = (key: string, text: string) => {
   }
   const html = md.render(text);
   markdownCache.set(key, { text, html });
-  // 在下一个 tick 初始化 mermaid
-  nextTick(() => {
-    initMermaid();
-  });
+  // 在回复完成后再初始化 mermaid，避免流式过程中频繁解析
+  if (!sendLoading.value) {
+    nextTick(() => {
+      initMermaid();
+    });
+  }
   return html;
 };
 
@@ -404,8 +406,9 @@ const initMermaid = async () => {
           }
         } catch (error) {
           console.error("Mermaid render error:", error);
-          // 如果渲染失败，移除 data-processed 标记以便重试
-          element.removeAttribute("data-processed");
+          // 渲染失败时标记为 error，避免重复渲染导致的错误刷屏
+          element.setAttribute("data-processed", "error");
+          element.classList.add("mermaid-error");
         }
       }
     }
@@ -524,10 +527,11 @@ onMounted(async () => {
 
   adkStore.registerScrollRef(scrollRef);
 
-  // 监听消息列表变化，初始化 mermaid
+  // 监听消息列表变化，在回复完成后初始化 mermaid
   watch(
-    () => messageList.value,
-    () => {
+    [() => messageList.value, () => sendLoading.value],
+    ([, loading]) => {
+      if (loading) return;
       nextTick(() => {
         initMermaid();
       });
