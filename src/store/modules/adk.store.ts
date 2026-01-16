@@ -133,6 +133,14 @@ export const useADKChatStore = defineStore("adkChatStore", {
         backendUrl
       );
     },
+    setLoginInfo(loginInfo: { remoter: string; userName: string }) {
+      this.loginInfo.remoter = loginInfo.remoter;
+      this.loginInfo.userName = loginInfo.userName || "";
+    },
+    clearLoginInfo() {
+      this.loginInfo.remoter = "";
+      this.loginInfo.userName = "";
+    },
     getToken() {
       return this.token;
     },
@@ -221,12 +229,12 @@ export const useADKChatStore = defineStore("adkChatStore", {
 
     async scrollToBottomSmooth() {
       // 如果用户正在滚动查看历史消息，不执行自动滚动
-      console.log(
-        "⬇️ scrollToBottomSmooth, this.autoScrollDownDisabled:",
-        this.autoScrollDownDisabled,
-        "\n    this.isProgrammaticScroll:",
-        this.isProgrammaticScroll
-      );
+      // console.log(
+      //   "⬇️ scrollToBottomSmooth, this.autoScrollDownDisabled:",
+      //   this.autoScrollDownDisabled,
+      //   "\n    this.isProgrammaticScroll:",
+      //   this.isProgrammaticScroll
+      // );
       if (this.autoScrollDownDisabled) return;
 
       // 标记这是程序控制的滚动
@@ -361,6 +369,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             // 第4次开始才检查任务状态
             // 检查任务状态，若无运行中任务则停止轮询
             if (!(await this.checkTaskRunning())) {
+              console.log("❌ 检查到无运行中任务，停止轮询 1");
               this.stopSessionPolling();
             }
             return;
@@ -376,6 +385,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           // 第4次开始才检查任务状态
           // 检查任务状态，若无运行中任务则停止轮询
           if (!(await this.checkTaskRunning())) {
+            console.log("❌ 检查到无运行中任务，停止轮询 2");
             this.stopSessionPolling();
           }
         },
@@ -590,20 +600,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         } else if (part.text.includes("```")) {
           const { language } = extractScriptContent(part.text);
           if (["python", "r", "bash"].includes(language)) {
-            // console.log('---- this.sessionId: ', this.sessionId, window.sessionStorage.getItem('sessionId'));
             this.isUserNewMessage && this.startSessionPolling(2);
-            //   window.parent.postMessage(
-            //     // 新对话的才自动执行
-            //     {
-            //       key: "mustExecuteScript",
-            //       type: "mustExecuteScript",
-            //       script: content,
-            //       eventId: message.eventId,
-            //       subtype: `code/${language.toLowerCase()}`
-            //     },
-            //     "*"
-            //   );
-            // console.log("📦 从代码块里发送_isFinalResponse");
             window.parent.postMessage(
               {
                 key: "isFinalResponse",
@@ -782,33 +779,30 @@ export const useADKChatStore = defineStore("adkChatStore", {
           ]);
         }
       } else if (lastMessage.text.includes("```")) {
-        const extracted = extractScriptContent(lastMessage.text);
-        if (extracted) {
-          // const { language, content } = extracted;
-          // console.log('---- 脚本内容: ', content);
-          this.isUserNewMessage && this.startSessionPolling(3);
-          //   window.parent.postMessage(
-          //     // 新对话的才自动执行
-          //     {
-          //       key: "mustExecuteScript",
-          //       type: "mustExecuteScript",
-          //       script: content,
-          //       subtype: `code/${language.toLowerCase()}`,
-          //       eventId: localStorage.getItem("finalEventId")!
-          //     },
-          //     "*"
-          //   );
+        const { language } = extractScriptContent(lastMessage.text);
+        if (["python", "r", "bash"].includes(language)) {
+          this.isUserNewMessage && this.startSessionPolling(2);
+          window.parent.postMessage(
+            {
+              key: "isFinalResponse",
+              type: "_isFinalResponse",
+              sessionId: this.currentSession.id,
+              value: true
+            },
+            "*"
+          );
           this.insertMessageBeforeLoadingMessage([
             lastMessage,
             {
               ...lastMessage,
               taskInfo: {
-                eventId: localStorage.getItem("finalEventId")!,
-                sessionId: this.currentSession.id,
-                state: "success"
+                eventId: lastMessage.eventId,
+                sessionId: this.currentSession.id
               }
             }
           ]);
+        } else {
+          this.insertMessageBeforeLoadingMessage([lastMessage]);
         }
       } else {
         this.insertMessageBeforeLoadingMessage([lastMessage]);
@@ -866,6 +860,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             return;
           }
           const chunkJson = JSON.parse(chunk);
+          console.log("📩chunkJson: ", chunkJson);
           if (chunkJson.error) {
             console.log("error", chunkJson.error);
             return;
@@ -919,6 +914,16 @@ export const useADKChatStore = defineStore("adkChatStore", {
                 session.state.title = sessionDetail.state?.title;
               }
             }
+            // const hasUpdates =
+            //   sessionDetail?.lastUpdateTime !== this.lastSessionSyncTime ||
+            //   (sessionDetail?.events?.length ?? 0) !==
+            //     (this.currentSession?.events?.length ?? 0);
+            // if (hasUpdates) {
+            //   const prevEventCount = this.currentSession?.events?.length ?? 0;
+            // this.currentSession = sessionDetail;
+            // this.lastSessionSyncTime = sessionDetail.lastUpdateTime;
+            this.parseSessionDetail(sessionDetail);
+            // }
           }
           window.parent.postMessage(
             {
@@ -949,6 +954,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       index: number,
       author: string = "bot"
     ) {
+      console.log("🎯processPart", chunkJson, part, index, author);
       const renderedContent =
         chunkJson.groundingMetadata?.searchEntryPoint?.renderedContent;
       if (part.text) {

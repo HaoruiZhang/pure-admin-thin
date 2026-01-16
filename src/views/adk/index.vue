@@ -108,12 +108,10 @@ function bindEventHandlers() {
         });
         break;
       case "loginRemoter":
-        loginInfo.value.remoter = event.data.remoter;
-        loginInfo.value.userName = event.data?.userName || "";
+        adkStore.setLoginInfo(event.data);
         break;
       case "logout":
-        loginInfo.value.remoter = "";
-        loginInfo.value.userName = "";
+        adkStore.clearLoginInfo();
         break;
       default:
         break;
