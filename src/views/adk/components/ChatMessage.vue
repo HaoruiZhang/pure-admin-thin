@@ -39,6 +39,8 @@ const COLLAPSE_PREVIEW_LENGTH = 1200; // 预览长度
 const expandedMessageKeys = ref<Set<string>>(new Set());
 const expandedFunctionCalls = ref<Set<string>>(new Set());
 const markdownCache = new Map<string, { text: string; html: string }>();
+const showDelayedLoading = ref(false);
+let delayedLoadingTimer: ReturnType<typeof setTimeout> | null = null;
 
 // 编辑相关状态
 const editingMessageIndex = ref<number | null>(null);
@@ -176,11 +178,46 @@ const getFunctionResponseDisplay = (functionResponse: any) => {
   return functionResponse.name || "函数响应";
 };
 
+const isFunctionResponseStreaming = (functionCallId: string) => {
+  const response = getFunctionResponse(functionCallId);
+  if (!response) return false;
+  const display = getFunctionResponseDisplay(response);
+  if (display === null || display === undefined) return true;
+  if (typeof display === "string") return display.trim().length === 0;
+  return false;
+};
+
+const hasPendingFunctionCall = () =>
+  messageList.value.some(
+    message =>
+      message?.functionCall?.id && !hasFunctionResponse(message.functionCall.id)
+  );
+
+const clearDelayedLoadingTimer = () => {
+  if (!delayedLoadingTimer) return;
+  clearTimeout(delayedLoadingTimer);
+  delayedLoadingTimer = null;
+};
+
+const scheduleDelayedLoading = () => {
+  clearDelayedLoadingTimer();
+  showDelayedLoading.value = false;
+  if (!sendLoading.value || hasPendingFunctionCall()) return;
+  delayedLoadingTimer = setTimeout(() => {
+    if (!sendLoading.value || hasPendingFunctionCall()) return;
+    console.log("😈 执行scheduleDelayedLoading");
+    showDelayedLoading.value = true;
+  }, 1500);
+};
+
 const setExpandedMessageKeys = (
   updater: (prev: Set<string>) => Set<string>
 ) => {
   expandedMessageKeys.value = updater(expandedMessageKeys.value);
 };
+
+const forceDetailsOpen = (html: string) =>
+  html.replace(/<details(?![^>]*\sopen\b)([^>]*)>/gi, "<details open$1>");
 
 const cacheMarkdown = (key: string, text: string) => {
   if (!text) return "";
@@ -188,7 +225,7 @@ const cacheMarkdown = (key: string, text: string) => {
   if (cached && cached.text === text) {
     return cached.html;
   }
-  const html = md.render(text);
+  const html = forceDetailsOpen(md.render(text));
   markdownCache.set(key, { text, html });
   // 在回复完成后再初始化 mermaid，避免流式过程中频繁解析
   if (!sendLoading.value) {
@@ -543,7 +580,21 @@ onMounted(async () => {
 onUnmounted(() => {
   (window as any).onCopyClick = null;
   (window as any).onRunClick = null;
+  clearDelayedLoadingTimer();
 });
+
+watch(
+  [() => messageList.value, () => sendLoading.value],
+  () => {
+    if (!sendLoading.value) {
+      clearDelayedLoadingTimer();
+      showDelayedLoading.value = false;
+      return;
+    }
+    scheduleDelayedLoading();
+  },
+  { deep: true }
+);
 </script>
 
 <template>
@@ -654,14 +705,19 @@ onUnmounted(() => {
                   <span class="function-call-icon">{{
                     hasFunctionResponse(item.functionCall.id) ? "✓" : "🔍"
                   }}</span>
-                  <span class="function-call-text">{{
-                    getFunctionCallDisplayText(item.functionCall)
-                  }}</span>
+                  <span
+                    class="function-call-text"
+                    :class="{
+                      typing: !hasFunctionResponse(item.functionCall.id)
+                    }"
+                  >
+                    {{ getFunctionCallDisplayText(item.functionCall) }}
+                  </span>
                   <span
                     v-if="!hasFunctionResponse(item.functionCall.id)"
                     class="function-call-loading"
                   >
-                    <span class="loading-dot" />
+                    <!-- <span class="loading-dot" /> -->
                   </span>
                   <span
                     v-if="
@@ -690,7 +746,14 @@ onUnmounted(() => {
                   "
                   class="function-response-content"
                 >
-                  <div class="function-response-text">
+                  <div
+                    class="function-response-text"
+                    :class="{
+                      typing:
+                        sendLoading &&
+                        isFunctionResponseStreaming(item.functionCall.id)
+                    }"
+                  >
                     <pre
                       v-if="
                         typeof getFunctionResponseDisplay(
@@ -848,7 +911,7 @@ onUnmounted(() => {
           </div>
         </template>
         <div
-          v-if="sendLoading"
+          v-if="showDelayedLoading"
           :ref="
             el =>
               el ? (messageRef['loading'] = el) : delete messageRef['loading']

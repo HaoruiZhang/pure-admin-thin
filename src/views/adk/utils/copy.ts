@@ -69,8 +69,8 @@ export const onRunDom = async (node: any) => {
 
   window.parent.postMessage(
     {
-      key: "workflowContent",
-      type: "workflowContent",
+      key: "rerunTask",
+      type: "rerunTask",
       user_id: adkStore.user_info?.user_id,
       session_id: currentSession.value.id,
       invocation_id: invocationId
@@ -104,8 +104,8 @@ export const onRunDom_raw = (node: any) => {
   console.log("获取的代码内容\n", content, "\neventId\n", eventId);
   window.parent.postMessage(
     {
-      key: "workflowContent",
-      type: "workflowContent",
+      key: "rerunTask",
+      type: "rerunTask",
       text: content,
       subtype: subtype || undefined,
       session:
