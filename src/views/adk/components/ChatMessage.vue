@@ -75,7 +75,7 @@ const confirmEditMessage = async (index: number) => {
         messageList.value[index + 1].invocationId
     );
     if (deleteRes && deleteRes.success) {
-      // 删除该消息及其后的所有消息（因为 sendMessage2 会添加新的用户消息）
+      // 删除该消息及其后的所有消息（因为 sendMessage 会添加新的用户消息）
       messageList.value.splice(index);
 
       // 设置用户输入
@@ -85,7 +85,7 @@ const confirmEditMessage = async (index: number) => {
       cancelEditMessage();
 
       // 重新发送消息
-      await adkStore.sendMessage2();
+      await adkStore.sendMessage();
     } else {
       ElMessage.error(deleteRes.message);
     }

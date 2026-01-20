@@ -55,9 +55,9 @@ export function createPollingController({
 
   const executeTask = async (force = false) => {
     if (executing || (!running && !force)) return;
-    console.log(executing, "executing");
-    console.log(running, "running");
-    console.log(force, "force");
+    // console.log(executing, "executing");
+    // console.log(running, "running");
+    // console.log(force, "force");
     executing = true;
     try {
       await task();

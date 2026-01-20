@@ -69,6 +69,7 @@ interface adkChatState {
   };
   autoScrollDownDisabled: boolean; // 为true时，禁止自动滚动
   isProgrammaticScroll: boolean; // 判断是否代码控制滚动
+  isAgentUnavailableAlertShowing: boolean; // 是否正在显示 Agent 不可用的弹窗
 }
 
 export const useADKChatStore = defineStore("adkChatStore", {
@@ -114,7 +115,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
     lastSessionSyncTime: 0,
     sessionPollingCount: 0, // 轮询计数器初始值
     autoScrollDownDisabled: false, // 为true时，禁止自动滚动
-    isProgrammaticScroll: true // 判断是否代码控制滚动
+    isProgrammaticScroll: true, // 判断是否代码控制滚动
+    isAgentUnavailableAlertShowing: false
   }),
   getters: {},
   actions: {
@@ -198,16 +200,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
           this.stopSessionPolling();
         });
     },
-    storeEvents(part: any, e: any, index: number) {
+    storeEvents(part: any, e: any) {
       let title = "";
-      console.log(
-        "▶️ 存储事件: \npart: ",
-        part,
-        "\ne: ",
-        e,
-        "\nindex: ",
-        index
-      );
+      // console.log("▶️ 存储事件:  part: ", part, " e: ", e, " index: ", index);
 
       if (part.text) {
         title += "text:" + part.text;
@@ -267,18 +262,37 @@ export const useADKChatStore = defineStore("adkChatStore", {
       return this.sessionList.find(session => session.id === id);
     },
     async getSessionList() {
-      adkService.getSessionList(this.user_info.user_id).then((res: any[]) => {
-        console.log("▶️ 向ADK后端查询Session列表: ", res);
+      adkService
+        .getSessionList(this.user_info.user_id)
+        .then((res: any[]) => {
+          console.log("▶️ 向ADK后端查询Session列表: ", res);
 
-        if (res.length) {
-          const sortedRes = res.sort((a, b) => {
-            return b?.lastUpdateTime - a?.lastUpdateTime;
-          });
-          this.sessionList = sortedRes;
-          this.needToFilterSessionList && this.filterSessionListFromBackend();
-        }
-        this.getListReady.resolve();
-      });
+          if (res && res.length) {
+            const sortedRes = res.sort((a, b) => {
+              return b?.lastUpdateTime - a?.lastUpdateTime;
+            });
+            this.sessionList = sortedRes;
+            this.needToFilterSessionList && this.filterSessionListFromBackend();
+          }
+          this.getListReady.resolve();
+        })
+        .catch(err => {
+          console.error("❌ 获取Session列表失败: ", err);
+          if (!this.isAgentUnavailableAlertShowing) {
+            this.isAgentUnavailableAlertShowing = true;
+            ElMessageBox.alert("Agent服务不可用，请联系Fas", "提示", {
+              confirmButtonText: "确定",
+              type: "error",
+              showClose: false,
+              closeOnClickModal: false,
+              closeOnPressEscape: false,
+              callback: () => {
+                this.isAgentUnavailableAlertShowing = false;
+              }
+            });
+          }
+          this.getListReady.resolve();
+        });
     },
     filterSessionListFromBackend() {
       const backendSessionIdList = this.backendSessionList.map(
@@ -326,10 +340,11 @@ export const useADKChatStore = defineStore("adkChatStore", {
       const tasksData = res?.data?.tasks || [];
       const hasRunningTask = tasksData.some((task: any) => {
         return (
-          !["DONE", "FAIL"].includes(task.status) || task.status_ai !== "DONE"
+          !["DONE", "FAIL", "CANCEL"].includes(task.status) ||
+          !["DONE", "FAIL", "CANCEL", "TIMEOUT"].includes(task.status_ai)
         );
       });
-      console.log("❓️ checkTaskRunning: ", hasRunningTask);
+      console.log("❓️ 是否有正在运行的任务: ", hasRunningTask);
       return hasRunningTask;
     },
 
@@ -423,7 +438,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           );
           index += 1;
           if (event.author && event.author !== "user") {
-            this.storeEvents(part, event, index);
+            this.storeEvents(part, event);
           }
         });
       });
@@ -517,7 +532,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
           }
         }
       }
-      this.checkFinalResponse(part, e ? e : null, index);
+      // e.author !== "user" && this.checkFinalResponse(part, e ? e : null, index);
 
       const message: any = {
         role,
@@ -580,7 +595,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
               window.parent.postMessage(
                 {
                   key: "userFormConfig",
-                  type: "userFormConfig",
+                  type: "1️⃣userFormConfig",
                   data: fields
                 },
                 "*"
@@ -588,6 +603,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
               console.log("==== 设置operatingFormIndex: ", index + 1);
               this.operatingFormEventId = message.eventId;
               this.operatingFormIndex = index + 1;
+              this.isUserNewMessage = false;
             }
 
             this.insertMessageBeforeLoadingMessage([
@@ -601,15 +617,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
           const { language } = extractScriptContent(part.text);
           if (["python", "r", "bash"].includes(language)) {
             this.isUserNewMessage && this.startSessionPolling(2);
-            window.parent.postMessage(
-              {
-                key: "isFinalResponse",
-                type: "_isFinalResponse",
-                sessionId: this.currentSession.id,
-                value: true
-              },
-              "*"
-            );
             this.insertMessageBeforeLoadingMessage([
               message,
               {
@@ -620,6 +627,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
                 }
               }
             ]);
+            this.isUserNewMessage = false;
           } else {
             this.insertMessageBeforeLoadingMessage([message]);
           }
@@ -702,38 +710,35 @@ export const useADKChatStore = defineStore("adkChatStore", {
       }
     },
 
-    checkFinalResponse(part: any, e?: any, index?: number) {
-      // 判断是否对话结束
-      // console.log('【checkFinalResponse】', part, e);
-      if (e?.actions.skip_summarization || e?.longRunningToolIds?.length) {
-        this.isFinalResponse = true;
-      } else if (
-        !part.functionResponse &&
-        !part.functionCall &&
-        !e?.partial &&
-        !part.text?.includes("<backend-reply-start>")
-      ) {
-        this.isFinalResponse = true;
-      } else {
-        this.isFinalResponse = false;
-      }
+    // checkFinalResponse(part: any, e?: any, index?: number) {
+    //   // 判断是否对话结束
+    //   if (e?.actions.skip_summarization || e?.longRunningToolIds?.length) {
+    //     this.isFinalResponse = true;
+    //   } else if (
+    //     !part.functionResponse &&
+    //     !part.functionCall &&
+    //     !e?.partial &&
+    //     !part.text?.includes("<backend-reply-start>")
+    //   ) {
+    //     this.isFinalResponse = true;
+    //   } else {
+    //     this.isFinalResponse = false;
+    //   }
 
-      if (this.isFinalResponse) {
-        console.log("---- 判断出对话已经结束! ");
-        if (index === this.messageList.length - 1) {
-          !this.checkTaskRunning() && this.stopSessionPolling();
-        }
-        window.parent.postMessage(
-          {
-            key: "isFinalResponse",
-            type: "_isFinalResponse",
-            sessionId: this.currentSession.id,
-            value: true
-          },
-          "*"
-        );
-      }
-    },
+    //   if (this.isFinalResponse && index === this.messageList.length - 1) {
+    //     console.log("⭕️ 🎉 对话已经结束! ", part, e, index);
+    //     !this.checkTaskRunning() && this.stopSessionPolling();
+    //     window.parent.postMessage(
+    //       {
+    //         key: "isFinalResponse",
+    //         type: "1️⃣_isFinalResponse ",
+    //         sessionId: this.currentSession.id,
+    //         value: true
+    //       },
+    //       "*"
+    //     );
+    //   }
+    // },
     handleFinalMessageIfFormConfig() {
       console.log(
         "🛠️📦【runSse完成, 手动处理最后一条消息, messages: 】",
@@ -760,7 +765,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             window.parent.postMessage(
               {
                 key: "userFormConfig",
-                type: "userFormConfig",
+                type: "0️⃣ userFormConfig",
                 data: fields
               },
               "*"
@@ -782,15 +787,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
         const { language } = extractScriptContent(lastMessage.text);
         if (["python", "r", "bash"].includes(language)) {
           this.isUserNewMessage && this.startSessionPolling(2);
-          window.parent.postMessage(
-            {
-              key: "isFinalResponse",
-              type: "_isFinalResponse",
-              sessionId: this.currentSession.id,
-              value: true
-            },
-            "*"
-          );
           this.insertMessageBeforeLoadingMessage([
             lastMessage,
             {
@@ -809,7 +805,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       }
     },
 
-    async sendMessage2(autoInput = false) {
+    async sendMessage(autoInput = false) {
       const newUserInput = autoInput
         ? this.hideMessageText[0]
         : this.userInput.trim();
@@ -823,7 +819,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       // Add user message
       if (!!newUserInput) {
         this.messageList.push({ role: "user", text: newUserInput });
-        this.isUserNewMessage = true;
+        this.isUserNewMessage = !autoInput; // 表单自动发送，不需要再次设置为true
       }
       // Add user message attachments
       if (this.selectedFiles?.length > 0) {
@@ -860,7 +856,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             return;
           }
           const chunkJson = JSON.parse(chunk);
-          console.log("📩chunkJson: ", chunkJson);
+          // console.log("📩chunkJson: ", chunkJson);
           if (chunkJson.error) {
             console.log("error", chunkJson.error);
             return;
@@ -868,11 +864,11 @@ export const useADKChatStore = defineStore("adkChatStore", {
           if (chunkJson.content) {
             for (const part of chunkJson.content.parts) {
               index += 1;
-              this.processPart(chunkJson, part, index, chunkJson.author);
+              this.processPart(chunkJson, part, index);
             }
           } else if (chunkJson.errorMessage) {
             console.log("error, chunkJson, index: ", chunkJson, index);
-            this.storeEvents(chunkJson, chunkJson, index);
+            this.storeEvents(chunkJson, chunkJson);
           }
           // 处理
         },
@@ -925,15 +921,15 @@ export const useADKChatStore = defineStore("adkChatStore", {
             this.parseSessionDetail(sessionDetail);
             // }
           }
-          window.parent.postMessage(
-            {
-              key: "isFinalResponse",
-              type: "_isFinalResponse",
-              sessionId: this.currentSession.id,
-              value: true
-            },
-            "*"
-          );
+          // window.parent.postMessage(
+          //   {
+          //     key: "isFinalResponse",
+          //     type: "3️⃣_isFinalResponse",
+          //     sessionId: this.currentSession.id,
+          //     value: true
+          //   },
+          //   "*"
+          // );
           if (this.specifiedMimePath) {
             this.specifiedMimePath = "";
             this.startSessionPolling(4);
@@ -948,13 +944,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
       );
       !autoInput && (this.userInput = "");
     },
-    processPart(
-      chunkJson: any,
-      part: any,
-      index: number,
-      author: string = "bot"
-    ) {
-      console.log("🎯processPart", chunkJson, part, index, author);
+    processPart(chunkJson: any, part: any, index: number) {
+      // console.log("🎯processPart", chunkJson, part, index, author);
       const renderedContent =
         chunkJson.groundingMetadata?.searchEntryPoint?.renderedContent;
       if (part.text) {
@@ -962,7 +953,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         const newChunk = part.text;
         if (part.thought) {
           if (newChunk !== this.latestThought) {
-            this.storeEvents(part, chunkJson, index);
+            this.storeEvents(part, chunkJson);
             const thoughtMessage = {
               role: "bot",
               text: processThoughtText(newChunk),
@@ -990,7 +981,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
               chunkJson.groundingMetadata.searchEntryPoint.renderedContent;
           }
           if (newChunk == this.streamingTextMessage.text) {
-            this.storeEvents(part, chunkJson, index);
+            this.storeEvents(part, chunkJson);
             this.eventMessageIndexArray[index] = newChunk;
             this.streamingTextMessage = null;
             localStorage.setItem("finalEventId", chunkJson.id);
@@ -1000,20 +991,10 @@ export const useADKChatStore = defineStore("adkChatStore", {
           }
           this.streamingTextMessage.text += newChunk;
           this.scrollToBottomSmooth();
-          if (author === "workflow_agent") {
-            window.parent.postMessage(
-              {
-                key: "workflowContent",
-                type: "workflowContent",
-                text: this.streamingTextMessage.text
-              },
-              "*"
-            );
-          }
         }
       } else if (!part.thought) {
         this.isModelThinkingSubject = false;
-        this.storeEvents(part, chunkJson, index);
+        this.storeEvents(part, chunkJson);
         this.storeMessage(
           part,
           chunkJson,

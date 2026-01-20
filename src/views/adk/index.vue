@@ -91,7 +91,7 @@ function bindEventHandlers() {
               messageList.value[
                 operatingFormIndex.value - 1
               ].userFormConfig[0] = event.data.data;
-              adkStore.sendMessage2(true);
+              adkStore.sendMessage(true);
             }
           });
         break;

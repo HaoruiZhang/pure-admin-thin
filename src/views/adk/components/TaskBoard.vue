@@ -49,7 +49,7 @@ interface TaskItem {
   id: string;
   type: "script" | "function";
   name: string;
-  status: "pending" | "running" | "success" | "error";
+  status: "pending" | "running" | "success" | "error" | "canceled";
   content: string;
   timestamp?: number;
   details?: any;
@@ -84,9 +84,12 @@ const fetchTasks = async () => {
           ? "success"
           : item.status === "FAIL"
             ? "error"
-            : item.status === "RUNNING" || item.status_ai !== "DONE"
+            : item.status === "RUNNING" ||
+                !["DONE", "FAIL", "CANCEL", "TIMEOUT"].includes(item.status_ai)
               ? "running"
-              : "pending",
+              : item.status === "CANCEL"
+                ? "canceled"
+                : "pending",
       content: item.filename || "",
       timestamp: item.created_at ? new Date(item.created_at).getTime() : 0,
       details: item
@@ -186,7 +189,8 @@ const getStatusLabel = (status: string) => {
     success: "已完成",
     error: "失败",
     running: "进行中",
-    pending: "等待中"
+    pending: "等待中",
+    canceled: "已取消"
   };
   return map[status] || status;
 };
@@ -414,6 +418,10 @@ const killTask = async (task: TaskItem) => {
 
   &.status-error {
     border-left-color: var(--el-color-danger);
+  }
+
+  &.status-canceled {
+    border-left-color: var(--el-color-info);
   }
 
   :deep(.el-card__header) {

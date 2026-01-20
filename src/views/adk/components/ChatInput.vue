@@ -10,7 +10,7 @@ defineOptions({
 function sendMessage() {
   if (!userInput.value) return;
   console.log("发送提问: ", userInput.value);
-  adkStore.sendMessage2();
+  adkStore.sendMessage();
 }
 </script>
 
