@@ -603,7 +603,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
               console.log("==== 设置operatingFormIndex: ", index + 1);
               this.operatingFormEventId = message.eventId;
               this.operatingFormIndex = index + 1;
-              this.isUserNewMessage = false;
+              this.stopSessionPolling();
             }
 
             this.insertMessageBeforeLoadingMessage([
@@ -627,7 +627,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
                 }
               }
             ]);
-            this.isUserNewMessage = false;
           } else {
             this.insertMessageBeforeLoadingMessage([message]);
           }
@@ -710,35 +709,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
       }
     },
 
-    // checkFinalResponse(part: any, e?: any, index?: number) {
-    //   // 判断是否对话结束
-    //   if (e?.actions.skip_summarization || e?.longRunningToolIds?.length) {
-    //     this.isFinalResponse = true;
-    //   } else if (
-    //     !part.functionResponse &&
-    //     !part.functionCall &&
-    //     !e?.partial &&
-    //     !part.text?.includes("<backend-reply-start>")
-    //   ) {
-    //     this.isFinalResponse = true;
-    //   } else {
-    //     this.isFinalResponse = false;
-    //   }
-
-    //   if (this.isFinalResponse && index === this.messageList.length - 1) {
-    //     console.log("⭕️ 🎉 对话已经结束! ", part, e, index);
-    //     !this.checkTaskRunning() && this.stopSessionPolling();
-    //     window.parent.postMessage(
-    //       {
-    //         key: "isFinalResponse",
-    //         type: "1️⃣_isFinalResponse ",
-    //         sessionId: this.currentSession.id,
-    //         value: true
-    //       },
-    //       "*"
-    //     );
-    //   }
-    // },
     handleFinalMessageIfFormConfig() {
       console.log(
         "🛠️📦【runSse完成, 手动处理最后一条消息, messages: 】",
@@ -761,22 +731,16 @@ export const useADKChatStore = defineStore("adkChatStore", {
             "formMsgIndex",
             this.messageList.length.toString()
           );
-          if (this.isUserNewMessage) {
-            window.parent.postMessage(
-              {
-                key: "userFormConfig",
-                type: "0️⃣ userFormConfig",
-                data: fields
-              },
-              "*"
-            );
-            this.operatingFormEventId = lastMessage.eventId;
-            console.log(
-              "==== 设置operatingFormIndex: ",
-              this.messageList.length + 1
-            );
-            this.operatingFormIndex = this.messageList.length + 1;
-          }
+          window.parent.postMessage(
+            {
+              key: "userFormConfig",
+              type: "0️⃣ userFormConfig",
+              data: fields
+            },
+            "*"
+          );
+          this.operatingFormEventId = lastMessage.eventId;
+          this.operatingFormIndex = this.messageList.length + 1;
 
           this.insertMessageBeforeLoadingMessage([
             lastMessage,
@@ -819,7 +783,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       // Add user message
       if (!!newUserInput) {
         this.messageList.push({ role: "user", text: newUserInput });
-        this.isUserNewMessage = !autoInput; // 表单自动发送，不需要再次设置为true
+        this.isUserNewMessage = true;
       }
       // Add user message attachments
       if (this.selectedFiles?.length > 0) {
@@ -895,8 +859,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
         // complete 回调
         async () => {
           this.sendLoading = false;
-          console.log("complete");
+          console.log("🏁🏁🏁runSSE回复结束, 处理最后一条消息🏁🏁🏁");
           this.handleFinalMessageIfFormConfig();
+          this.isUserNewMessage = false;
           const sessionDetail = (await adkService.getSessionDetail(
             this.user_info.user_id,
             this.currentSession.id
@@ -910,16 +875,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
                 session.state.title = sessionDetail.state?.title;
               }
             }
-            // const hasUpdates =
-            //   sessionDetail?.lastUpdateTime !== this.lastSessionSyncTime ||
-            //   (sessionDetail?.events?.length ?? 0) !==
-            //     (this.currentSession?.events?.length ?? 0);
-            // if (hasUpdates) {
-            //   const prevEventCount = this.currentSession?.events?.length ?? 0;
-            // this.currentSession = sessionDetail;
-            // this.lastSessionSyncTime = sessionDetail.lastUpdateTime;
             this.parseSessionDetail(sessionDetail);
-            // }
           }
           // window.parent.postMessage(
           //   {
