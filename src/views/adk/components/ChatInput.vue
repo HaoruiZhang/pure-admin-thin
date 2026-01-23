@@ -3,7 +3,7 @@ import SendMessage from "@/assets/svg/send_message.svg";
 import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store/modules/adk.store";
 const adkStore = useADKChatStore();
-const { userInput } = storeToRefs(adkStore);
+const { userInput, sendLoading } = storeToRefs(adkStore);
 defineOptions({
   name: "ADK-ChatInput"
 });
@@ -11,6 +11,11 @@ function sendMessage() {
   if (!userInput.value) return;
   console.log("发送提问: ", userInput.value);
   adkStore.sendMessage();
+}
+
+function stopSSE() {
+  adkStore.stopSSE();
+  adkStore.sendLoading = false;
 }
 </script>
 
@@ -28,6 +33,7 @@ function sendMessage() {
     />
     <div style="position: relative; width: 100%; height: 20px">
       <el-button
+        v-if="!sendLoading"
         style="
           position: absolute;
           right: 0;
@@ -44,6 +50,25 @@ function sendMessage() {
           width="14px"
           height="14px"
           style="vertical-align: middle"
+        />
+      </el-button>
+      <el-button
+        v-else
+        style="
+          position: absolute;
+          right: 0;
+          bottom: 0;
+          width: 20px;
+          height: 20px;
+          padding: 0;
+          background: #f56c6c;
+          border: none;
+          border-radius: 5px;
+        "
+        @click.prevent.stop="stopSSE"
+      >
+        <div
+          style="width: 8px; height: 8px; background: white; border-radius: 1px"
         />
       </el-button>
     </div>
