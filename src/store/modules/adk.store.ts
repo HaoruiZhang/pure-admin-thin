@@ -641,6 +641,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         this.eventMessageIndexArray[index] = part.functionCall;
       } else if (part.functionResponse) {
         message.functionResponse = part.functionResponse;
+
         message.eventId = e?.id;
         message.invocationId = e?.invocationId;
         message.functionResponse["query"] = getQueryFromId(
@@ -689,6 +690,26 @@ export const useADKChatStore = defineStore("adkChatStore", {
           );
         }
         this.eventMessageIndexArray[index] = part.functionResponse;
+
+        if (
+          part.functionResponse.name === "generate_ppt_from_content" &&
+          part.functionResponse.response?.status === "success"
+        ) {
+          const response = part.functionResponse.response;
+          this.insertMessageBeforeLoadingMessage([
+            message,
+            {
+              ...message,
+              pptInfo: {
+                pdfPath: response.pdf_path,
+                projectId: response.project_id,
+                pagesCount: response.pages_count,
+                message: response.message
+              }
+            }
+          ]);
+          return;
+        }
       } else if (part.executableCode) {
         message.executableCode = part.executableCode;
         this.eventMessageIndexArray[index] = part.executableCode;
@@ -703,7 +724,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
           }
         }
       }
-
       if (Object.keys(part).length > 0) {
         this.insertMessageBeforeLoadingMessage(message);
       }
@@ -965,6 +985,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     stopSSE() {
       // 主动停止
       this.sseController?.stop?.();
+      this.sendLoading = false;
     }
   }
 });

@@ -5,7 +5,7 @@ import mermaid from "mermaid";
 import { storeToRefs } from "pinia";
 import { ElMessage } from "element-plus";
 import { taskService } from "@/api/adk.service";
-import { Edit } from "@element-plus/icons-vue";
+import { Edit, Document } from "@element-plus/icons-vue";
 import { md } from "../utils/markdown";
 import { onCopyDom, onRunDom } from "../utils";
 import { useADKChatStore } from "@/store/modules/adk.store";
@@ -536,10 +536,31 @@ const handleClickMessage = (message: any, index: number) => {
       },
       "*"
     );
+  } else if (message.pptInfo) {
+    window.parent.postMessage(
+      {
+        key: "viewPdf",
+        type: "viewPdf",
+        projectId: message.pptInfo.projectId,
+        pdfPath: message.pptInfo.pdfPath,
+        sessionId: currentSession.value.id
+      },
+      "*"
+    );
   } else if (message.inlineData) {
     showPreview.value = true;
     srcList.value = [message.inlineData.data];
   }
+};
+
+const downloadPPT = (pptInfo: any) => {
+  if (!pptInfo?.pdfPath) return;
+  const link = document.createElement("a");
+  link.href = pptInfo.pdfPath;
+  link.download = `presentation_${pptInfo.projectId || Date.now()}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 onMounted(async () => {
@@ -625,7 +646,7 @@ watch(
                 (
                   (item.text &&
                     item.text.startsWith('<backend-reply-start>')) ||
-                  item.functionResponse ||
+                  (item.functionResponse && !item.pptInfo) ||
                   (item.taskInfo && !loginInfo.remoter) ||
                   (item.text && adkStore.hideMessageText.includes(item.text))
                 )
@@ -655,8 +676,12 @@ watch(
                 'dark:text-white!',
                 {
                   'flex-width':
-                    item.functionCall || item.formConfig || item.taskInfo,
-                  'is-btn-link': item.taskInfo || item.formConfig,
+                    item.functionCall ||
+                    item.formConfig ||
+                    item.taskInfo ||
+                    item.pptInfo,
+                  'is-btn-link':
+                    item.taskInfo || item.formConfig || item.pptInfo,
                   'has-function-call': item.functionCall
                 }
               ]"
@@ -783,7 +808,12 @@ watch(
 
               <!-- 消息内容 -->
               <div
-                v-if="item.text && !item.formConfig && !item.taskInfo"
+                v-if="
+                  item.text &&
+                  !item.formConfig &&
+                  !item.taskInfo &&
+                  !item.pptInfo
+                "
                 class="message-content"
               >
                 <!-- 用户消息编辑模式 -->
@@ -865,7 +895,12 @@ watch(
 
               <!--内联图片-->
               <div
-                v-if="item.inlineData && !item.formConfig && !item.taskInfo"
+                v-if="
+                  item.inlineData &&
+                  !item.formConfig &&
+                  !item.taskInfo &&
+                  !item.pptInfo
+                "
                 class="message-content"
               >
                 <div
@@ -889,6 +924,39 @@ watch(
               <div v-if="item.formConfig">Check form config</div>
               <!-- 任务信息 -->
               <div v-if="item.taskInfo">View task info</div>
+              <!-- PPT 信息 -->
+              <div v-if="item.pptInfo" class="ppt-info-card">
+                <div class="ppt-icon-wrapper">
+                  <el-icon :size="32" color="#ff4d4f"><Document /></el-icon>
+                </div>
+                <div class="ppt-content">
+                  <div class="ppt-header">
+                    <span class="ppt-title">演示文稿.pdf</span>
+                    <span class="ppt-meta">
+                      {{ item.pptInfo.pagesCount }} 页
+                    </span>
+                  </div>
+                  <div class="ppt-actions">
+                    <el-button
+                      type="primary"
+                      size="small"
+                      link
+                      @click.stop="handleClickMessage(item, index)"
+                    >
+                      预览
+                    </el-button>
+                    <el-divider direction="vertical" />
+                    <el-button
+                      type="primary"
+                      size="small"
+                      link
+                      @click.stop="downloadPPT(item.pptInfo)"
+                    >
+                      下载
+                    </el-button>
+                  </div>
+                </div>
+              </div>
               <div class="message-actions-row-margin">
                 <el-button
                   v-if="
@@ -1138,6 +1206,79 @@ watch(
         .collapse-btn {
           align-self: flex-start;
           padding: 0;
+        }
+
+        .ppt-info-card {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+          width: 320px;
+          padding: 12px 16px;
+          margin: 8px 0;
+          background-color: var(--el-fill-color-blank);
+          border: 1px solid var(--el-border-color-light);
+          border-radius: 8px;
+          transition: all 0.2s ease;
+
+          &:hover {
+            background-color: var(--el-fill-color-light);
+            border-color: var(--el-color-primary-light-5);
+          }
+
+          .ppt-icon-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            background-color: #fff1f0;
+            border-radius: 6px;
+          }
+
+          .ppt-content {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+
+            .ppt-header {
+              display: flex;
+              gap: 8px;
+              align-items: baseline;
+              justify-content: space-between;
+
+              .ppt-title {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--el-text-color-primary);
+                white-space: nowrap;
+              }
+
+              .ppt-meta {
+                flex-shrink: 0;
+                font-size: 12px;
+                color: var(--el-text-color-secondary);
+                opacity: 0.7;
+              }
+            }
+
+            .ppt-actions {
+              display: flex;
+              align-items: center;
+
+              .el-button {
+                padding: 0;
+                font-size: 13px;
+              }
+
+              .el-divider--vertical {
+                margin: 0 12px;
+              }
+            }
+          }
         }
 
         /* functionCall 样式 - Cursor 风格，紧凑简洁 */
