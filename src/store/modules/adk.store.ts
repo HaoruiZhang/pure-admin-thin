@@ -878,7 +878,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
         },
         // complete 回调
         async () => {
-          this.sendLoading = false;
           console.log("🏁🏁🏁runSSE回复结束, 处理最后一条消息🏁🏁🏁");
           this.handleFinalMessageIfFormConfig();
           this.isUserNewMessage = false;
@@ -913,8 +912,10 @@ export const useADKChatStore = defineStore("adkChatStore", {
             setTimeout(async () => {
               if (await this.checkTaskRunning()) {
                 this.startSessionPolling(5);
+              } else {
+                this.sendLoading = false;
               }
-            }, 3000);
+            }, 8000);
           }
         }
       );
