@@ -702,9 +702,11 @@ export const useADKChatStore = defineStore("adkChatStore", {
               ...message,
               pptInfo: {
                 pdfPath: response.pdf_path,
+                pptxPath: response.pptx_path,
                 projectId: response.project_id,
                 pagesCount: response.pages_count,
-                message: response.message
+                message: response.message,
+                status: response.status
               }
             }
           ]);

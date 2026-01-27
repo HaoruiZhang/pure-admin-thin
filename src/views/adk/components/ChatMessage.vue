@@ -3,9 +3,9 @@ import { onMounted, ref, nextTick, onUnmounted, watch } from "vue";
 import mermaid from "mermaid";
 
 import { storeToRefs } from "pinia";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElLoading } from "element-plus";
 import { taskService } from "@/api/adk.service";
-import { Edit, Document } from "@element-plus/icons-vue";
+import { Edit, Document, ArrowDown } from "@element-plus/icons-vue";
 import { md } from "../utils/markdown";
 import { onCopyDom, onRunDom } from "../utils";
 import { useADKChatStore } from "@/store/modules/adk.store";
@@ -40,6 +40,7 @@ const expandedMessageKeys = ref<Set<string>>(new Set());
 const expandedFunctionCalls = ref<Set<string>>(new Set());
 const markdownCache = new Map<string, { text: string; html: string }>();
 const showDelayedLoading = ref(false);
+const downloadingPdfPath = ref("");
 let delayedLoadingTimer: ReturnType<typeof setTimeout> | null = null;
 
 // 编辑相关状态
@@ -537,30 +538,55 @@ const handleClickMessage = (message: any, index: number) => {
       "*"
     );
   } else if (message.pptInfo) {
-    window.parent.postMessage(
-      {
-        key: "viewPdf",
-        type: "viewPdf",
-        projectId: message.pptInfo.projectId,
-        pdfPath: message.pptInfo.pdfPath,
-        sessionId: currentSession.value.id
-      },
-      "*"
-    );
+    // window.parent.postMessage(
+    //   {
+    //     key: "viewPdf",
+    //     type: "viewPdf",
+    //     projectId: message.pptInfo.projectId,
+    //     pdfPath: message.pptInfo.pdfPath,
+    //     sessionId: currentSession.value.id
+    //   },
+    //   "*"
+    // );
+
+    const fileName = message.pptInfo.pdfPath.split("/").pop();
+    const fileUrl = `${import.meta.env.VITE_TMPFILE_URL}/view_tmp/${fileName}`;
+    window.open(fileUrl, "_blank");
   } else if (message.inlineData) {
     showPreview.value = true;
     srcList.value = [message.inlineData.data];
   }
 };
 
-const downloadPPT = (pptInfo: any) => {
-  if (!pptInfo?.pdfPath) return;
-  const link = document.createElement("a");
-  link.href = pptInfo.pdfPath;
-  link.download = `presentation_${pptInfo.projectId || Date.now()}.pdf`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+const downloadPPT = async (pptInfo: any, type: "pdf" | "pptx" = "pdf") => {
+  console.log("👻 下载PPT: ", pptInfo, type);
+  const path = type === "pdf" ? pptInfo.pdfPath : pptInfo.pptxPath;
+  if (!path) {
+    ElMessage.warning(`暂无可用的 ${type.toUpperCase()} 文件`);
+    return;
+  }
+  downloadingPdfPath.value = path;
+  try {
+    const fileNameFromPath = path.split("/").pop();
+    const fileUrl = `${import.meta.env.VITE_TMPFILE_URL}/tmp/${fileNameFromPath}`;
+    const response = await fetch(fileUrl);
+    if (!response.ok) throw new Error("下载请求失败");
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileNameFromPath || `download.${type}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    ElMessage.success(`${type.toUpperCase()} 下载成功`);
+  } catch (error) {
+    console.error("下载文件失败:", error);
+    ElMessage.error("下载文件失败");
+  } finally {
+    downloadingPdfPath.value = "";
+  }
 };
 
 onMounted(async () => {
@@ -927,7 +953,9 @@ watch(
               <!-- PPT 信息 -->
               <div v-if="item.pptInfo" class="ppt-info-card">
                 <div class="ppt-icon-wrapper">
-                  <el-icon :size="32" color="#ff4d4f"><Document /></el-icon>
+                  <el-icon :size="32" color="#ff4d4f">
+                    <Document />
+                  </el-icon>
                 </div>
                 <div class="ppt-content">
                   <div class="ppt-header">
@@ -947,12 +975,25 @@ watch(
                     </el-button>
                     <el-divider direction="vertical" />
                     <el-button
+                      v-if="item.pptInfo?.pdfPath"
                       type="primary"
                       size="small"
                       link
-                      @click.stop="downloadPPT(item.pptInfo)"
+                      :loading="downloadingPdfPath === item.pptInfo.pdfPath"
+                      @click.stop="downloadPPT(item.pptInfo, 'pdf')"
                     >
-                      下载
+                      PDF
+                    </el-button>
+                    <el-divider direction="vertical" />
+                    <el-button
+                      v-if="item.pptInfo?.pptxPath"
+                      type="primary"
+                      size="small"
+                      link
+                      :loading="downloadingPdfPath === item.pptInfo.pptxPath"
+                      @click.stop="downloadPPT(item.pptInfo, 'pptx')"
+                    >
+                      PPTX
                     </el-button>
                   </div>
                 </div>
@@ -969,7 +1010,9 @@ watch(
                   type="primary"
                   @click.stop="startEditMessage(index, item.text)"
                 >
-                  <el-icon><Edit /></el-icon>
+                  <el-icon>
+                    <Edit />
+                  </el-icon>
                 </el-button>
               </div>
             </div>
