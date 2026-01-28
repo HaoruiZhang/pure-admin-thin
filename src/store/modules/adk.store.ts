@@ -706,7 +706,8 @@ export const useADKChatStore = defineStore("adkChatStore", {
                 projectId: response.project_id,
                 pagesCount: response.pages_count,
                 message: response.message,
-                status: response.status
+                status: response.status,
+                thumbnailPath: response?.thumbnail_path
               }
             }
           ]);

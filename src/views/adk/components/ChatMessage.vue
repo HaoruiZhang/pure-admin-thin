@@ -25,6 +25,7 @@ defineOptions({
 });
 
 // refs
+const baseUrl = import.meta.env.VITE_TMPFILE_URL;
 const showPreview = ref(false);
 const srcList = ref<string[]>([]);
 const messageRef = ref<any[]>([]);
@@ -951,50 +952,118 @@ watch(
               <!-- 任务信息 -->
               <div v-if="item.taskInfo">View task info</div>
               <!-- PPT 信息 -->
-              <div v-if="item.pptInfo" class="ppt-info-card">
-                <div class="ppt-icon-wrapper">
-                  <el-icon :size="32" color="#ff4d4f">
-                    <Document />
-                  </el-icon>
-                </div>
-                <div class="ppt-content">
-                  <div class="ppt-header">
-                    <span class="ppt-title">演示文稿.pdf</span>
-                    <span class="ppt-meta">
-                      {{ item.pptInfo.pagesCount }} 页
-                    </span>
+              <div v-if="item.pptInfo" class="ppt-container">
+                <!-- 缩略图样式 -->
+                <div
+                  v-if="item.pptInfo.thumbnailPath"
+                  class="ppt-thumbnail-card"
+                >
+                  <div class="thumbnail-wrapper">
+                    <el-image
+                      :src="`${baseUrl}/tmp/${item.pptInfo.thumbnailPath.split('/').pop()}`"
+                      fit="cover"
+                      class="thumbnail-img"
+                    />
+                    <div class="thumbnail-overlay">
+                      <span class="ppt-pages-badge">
+                        {{ item.pptInfo.pagesCount }}页
+                      </span>
+                    </div>
                   </div>
-                  <div class="ppt-actions">
-                    <el-button
-                      type="primary"
-                      size="small"
-                      link
-                      @click.stop="handleClickMessage(item, index)"
-                    >
-                      预览
-                    </el-button>
-                    <el-divider direction="vertical" />
-                    <el-button
-                      v-if="item.pptInfo?.pdfPath"
-                      type="primary"
-                      size="small"
-                      link
-                      :loading="downloadingPdfPath === item.pptInfo.pdfPath"
-                      @click.stop="downloadPPT(item.pptInfo, 'pdf')"
-                    >
-                      PDF
-                    </el-button>
-                    <el-divider direction="vertical" />
-                    <el-button
-                      v-if="item.pptInfo?.pptxPath"
-                      type="primary"
-                      size="small"
-                      link
-                      :loading="downloadingPdfPath === item.pptInfo.pptxPath"
-                      @click.stop="downloadPPT(item.pptInfo, 'pptx')"
-                    >
-                      PPTX
-                    </el-button>
+                  <div class="ppt-thumbnail-footer">
+                    <div class="ppt-title-row">
+                      <el-icon class="ppt-type-icon"><Document /></el-icon>
+                      <span class="ppt-title"
+                        >演示文稿{{
+                          item.pptInfo.pptxPath ? ".pptx" : ".pdf"
+                        }}</span
+                      >
+                    </div>
+                    <div class="ppt-actions">
+                      <el-button
+                        type="primary"
+                        size="small"
+                        link
+                        @click.stop="handleClickMessage(item, index)"
+                      >
+                        预览
+                      </el-button>
+                      <el-divider direction="vertical" />
+                      <el-button
+                        v-if="item.pptInfo?.pdfPath"
+                        type="primary"
+                        size="small"
+                        link
+                        :loading="downloadingPdfPath === item.pptInfo.pdfPath"
+                        @click.stop="downloadPPT(item.pptInfo, 'pdf')"
+                      >
+                        PDF
+                      </el-button>
+                      <el-divider direction="vertical" />
+                      <el-button
+                        v-if="item.pptInfo?.pptxPath"
+                        type="primary"
+                        size="small"
+                        link
+                        :loading="downloadingPdfPath === item.pptInfo.pptxPath"
+                        @click.stop="downloadPPT(item.pptInfo, 'pptx')"
+                      >
+                        PPTX
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 普通卡片样式 -->
+                <div v-else class="ppt-info-card">
+                  <div class="ppt-icon-wrapper">
+                    <el-icon :size="32" color="#ff4d4f">
+                      <Document />
+                    </el-icon>
+                  </div>
+                  <div class="ppt-content">
+                    <div class="ppt-header">
+                      <span class="ppt-title"
+                        >演示文稿{{
+                          item.pptInfo.pptxPath ? ".pptx" : ".pdf"
+                        }}</span
+                      >
+                      <span class="ppt-meta">
+                        {{ item.pptInfo.pagesCount }} 页
+                      </span>
+                    </div>
+                    <div class="ppt-actions">
+                      <el-button
+                        type="primary"
+                        size="small"
+                        link
+                        @click.stop="handleClickMessage(item, index)"
+                      >
+                        预览
+                      </el-button>
+                      <el-divider direction="vertical" />
+                      <el-button
+                        v-if="item.pptInfo?.pdfPath"
+                        type="primary"
+                        size="small"
+                        link
+                        :loading="downloadingPdfPath === item.pptInfo.pdfPath"
+                        @click.stop="downloadPPT(item.pptInfo, 'pdf')"
+                      >
+                        PDF
+                      </el-button>
+                      <el-divider direction="vertical" />
+                      <el-button
+                        v-if="item.pptInfo?.pptxPath"
+                        type="primary"
+                        size="small"
+                        link
+                        :loading="downloadingPdfPath === item.pptInfo.pptxPath"
+                        @click.stop="downloadPPT(item.pptInfo, 'pptx')"
+                      >
+                        PPTX
+                      </el-button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1249,6 +1318,85 @@ watch(
         .collapse-btn {
           align-self: flex-start;
           padding: 0;
+        }
+
+        .ppt-container {
+          width: 100%;
+          max-width: 400px;
+          margin: 8px 0;
+        }
+
+        .ppt-thumbnail-card {
+          overflow: hidden;
+          background-color: var(--el-fill-color-blank);
+          border: 1px solid var(--el-border-color-light);
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgb(0 0 0 / 5%);
+          transition: all 0.3s ease;
+
+          &:hover {
+            border-color: var(--el-color-primary-light-5);
+            box-shadow: 0 6px 16px rgb(0 0 0 / 10%);
+          }
+
+          .thumbnail-wrapper {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+            background-color: #f5f7fa;
+
+            .thumbnail-img {
+              width: 100%;
+              height: 100%;
+            }
+
+            .thumbnail-overlay {
+              position: absolute;
+              top: 12px;
+              right: 12px;
+            }
+
+            .ppt-pages-badge {
+              padding: 2px 8px;
+              font-size: 12px;
+              color: #fff;
+              background: rgb(0 0 0 / 40%);
+              border-radius: 4px;
+              backdrop-filter: blur(4px);
+            }
+          }
+
+          .ppt-thumbnail-footer {
+            padding: 12px 16px;
+
+            .ppt-title-row {
+              display: flex;
+              gap: 8px;
+              align-items: center;
+              margin-bottom: 8px;
+
+              .ppt-type-icon {
+                font-size: 16px;
+                color: #ff4d4f;
+              }
+
+              .ppt-title {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--el-text-color-primary);
+                white-space: nowrap;
+              }
+            }
+
+            .ppt-actions {
+              display: flex;
+              align-items: center;
+              justify-content: flex-start;
+            }
+          }
         }
 
         .ppt-info-card {
