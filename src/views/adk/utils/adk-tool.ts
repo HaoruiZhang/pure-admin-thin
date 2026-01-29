@@ -15,6 +15,35 @@ export function getSessionListByDays(
     return diffInDays >= daysRangeStart && diffInDays < daysRangeEnd;
   });
 }
+export const getTaskStatus = (item: any) => {
+  const { status, status_ai, subtype = "" } = item;
+
+  // 1. 成功状态：主状态完成 且 (AI状态完成 或 是图片类型)
+  if (
+    status === "DONE" &&
+    (status_ai === "DONE" || subtype.startsWith("image/"))
+  ) {
+    return "success";
+  }
+
+  // 2. 失败状态
+  if (status === "FAIL" || status_ai === "FAIL") {
+    return "error";
+  }
+
+  // 3. 运行中状态：主状态为 RUNNING 或 AI状态不在终态列表中
+  const finalAIStates = ["DONE", "FAIL", "CANCEL", "TIMEOUT"];
+  if (status === "RUNNING" || !finalAIStates.includes(status_ai)) {
+    return "running";
+  }
+
+  // 4. 其他状态映射
+  if (status === "CANCEL") {
+    return "canceled";
+  }
+
+  return "pending";
+};
 
 export const getNewSession = (userId: string = "user"): AdkSession => {
   return {

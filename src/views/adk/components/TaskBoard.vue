@@ -3,7 +3,7 @@ import { computed, ref, watch, onBeforeUnmount } from "vue";
 import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store/modules/adk.store";
 import { backendService } from "@/api/adk.service";
-import { createPollingController } from "@/views/adk/utils";
+import { createPollingController, getTaskStatus } from "@/views/adk/utils";
 import type { PollingController } from "@/views/adk/utils";
 import {
   ElDrawer,
@@ -46,14 +46,13 @@ const adkStore = useADKChatStore();
 const { currentSession } = storeToRefs(adkStore);
 
 interface TaskItem {
-  id: string;
+  id: string | number;
   type: "script" | "function";
   name: string;
   status: "pending" | "running" | "success" | "error" | "canceled";
   content: string;
   timestamp?: number;
   details?: any;
-  status_ai: string;
 }
 
 const taskList = ref<TaskItem[]>([]);
@@ -80,18 +79,8 @@ const fetchTasks = async () => {
       id: item.tagname || item.id,
       type: item.subtype?.startsWith("code/") ? "script" : "function",
       name: item.filename ? item.filename.split("/").pop() : "Task",
-      status:
-        item.status === "DONE" && item.status_ai === "DONE"
-          ? "success"
-          : item.status === "FAIL"
-            ? "error"
-            : item.status === "RUNNING" ||
-                !["DONE", "FAIL", "CANCEL", "TIMEOUT"].includes(item.status_ai)
-              ? "running"
-              : item.status === "CANCEL"
-                ? "canceled"
-                : "pending",
-      content: item.filename || "",
+      status: getTaskStatus(item),
+      content: item.content || item.filename || "",
       timestamp: item.created_at ? new Date(item.created_at).getTime() : 0,
       details: item
     }));
@@ -341,18 +330,19 @@ const killTask = async (task: TaskItem) => {
                       <span class="label">Task ID:</span>
                       <span class="value">{{ task.id }}</span>
                     </div>
-
-                    <div class="detail-item">
-                      <span class="label">运行状态:</span>
-                      <span class="value">{{ task.status }}</span>
+                    <div v-if="task.details.subtype" class="detail-item">
+                      <span class="label">任务类型:</span>
+                      <span class="value">{{ task.details.subtype }}</span>
                     </div>
                     <div class="detail-item">
-                      <span class="label">AI分析状态:</span>
-                      <span class="value">{{ task.status_ai }}</span>
+                      <span class="label">程序运行:</span>
+                      <span class="value">{{ task.details.status }}</span>
                     </div>
                     <div class="detail-item">
-                      <span class="label">Task ID:</span>
-                      <span class="value">{{ task.id }}</span>
+                      <span class="label">AI分析:</span>
+                      <span class="value">{{
+                        task.details.status_ai || "-"
+                      }}</span>
                     </div>
 
                     <div class="detail-item">
@@ -367,16 +357,16 @@ const killTask = async (task: TaskItem) => {
                         task.details.updated_at || "-"
                       }}</span>
                     </div>
-                    <div class="detail-item">
+                    <div v-if="task.details.creator" class="detail-item">
                       <span class="label">创建人:</span>
                       <span class="value">{{
                         task.details.creator || "-"
                       }}</span>
                     </div>
-                    <div class="detail-item">
-                      <span class="label">Tag Name:</span>
+                    <div v-if="task.details.filename" class="detail-item">
+                      <span class="label">脚本文件:</span>
                       <span class="value">{{
-                        task.details.tagname || "-"
+                        task.details.filename || "-"
                       }}</span>
                     </div>
                   </div>

@@ -12,7 +12,8 @@ import {
   getQueryFromId,
   startSse,
   processThoughtText,
-  createPollingController
+  createPollingController,
+  getTaskStatus
 } from "@/views/adk/utils";
 import type { PollingController } from "@/views/adk/utils";
 import { adkService, backendService } from "@/api/adk.service";
@@ -338,12 +339,9 @@ export const useADKChatStore = defineStore("adkChatStore", {
         token: this.getToken()
       });
       const tasksData = res?.data?.tasks || [];
-      const hasRunningTask = tasksData.some((task: any) => {
-        return (
-          !["DONE", "FAIL", "CANCEL"].includes(task.status) ||
-          !["DONE", "FAIL", "CANCEL", "TIMEOUT"].includes(task.status_ai)
-        );
-      });
+      const hasRunningTask = tasksData.some(
+        (task: any) => getTaskStatus(task) === "running"
+      );
       console.log("❓️ 是否有正在运行的任务: ", hasRunningTask);
       return hasRunningTask;
     },
