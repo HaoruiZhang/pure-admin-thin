@@ -53,6 +53,7 @@ interface TaskItem {
   content: string;
   timestamp?: number;
   details?: any;
+  status_ai: string;
 }
 
 const taskList = ref<TaskItem[]>([]);
@@ -212,7 +213,7 @@ const viewTaskInfo = (task: TaskItem) => {
     {
       key: "showTaskInfo",
       type: "showTaskInfo",
-      eventId: task.id,
+      taskId: task.id,
       sessionId: currentSession.value.id
     },
     "*"
@@ -340,6 +341,20 @@ const killTask = async (task: TaskItem) => {
                       <span class="label">Task ID:</span>
                       <span class="value">{{ task.id }}</span>
                     </div>
+
+                    <div class="detail-item">
+                      <span class="label">运行状态:</span>
+                      <span class="value">{{ task.status }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="label">AI分析状态:</span>
+                      <span class="value">{{ task.status_ai }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="label">Task ID:</span>
+                      <span class="value">{{ task.id }}</span>
+                    </div>
+
                     <div class="detail-item">
                       <span class="label">创建时间:</span>
                       <span class="value">{{
