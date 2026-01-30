@@ -123,6 +123,31 @@ const stopTaskPolling = () => {
 };
 
 watch(
+  () => currentSession.value?.id,
+  async id => {
+    if (!id) return;
+
+    // 切换 session 时，先静默检查是否有运行中的任务
+    try {
+      const res: any = await backendService.getTaskList({
+        session: id,
+        token: adkStore.getToken()
+      });
+      const tasksData = res?.data?.tasks || [];
+      const hasRunning = tasksData.some(
+        (item: any) => getTaskStatus(item) === "running"
+      );
+
+      if (hasRunning) {
+        visible.value = true;
+      }
+    } catch (error) {
+      console.error("Failed to check running tasks on session switch:", error);
+    }
+  }
+);
+
+watch(
   () => visible.value,
   val => {
     if (val) {
