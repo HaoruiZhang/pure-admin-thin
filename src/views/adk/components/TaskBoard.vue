@@ -335,7 +335,9 @@ const killTask = async (task: TaskItem) => {
                 <el-collapse-item name="1">
                   <template #title>
                     <div class="collapse-title-row">
+                      <span>任务信息</span>
                       <el-button
+                        v-if="task.details.subtype.startsWith('code')"
                         link
                         type="primary"
                         size="small"
@@ -347,7 +349,6 @@ const killTask = async (task: TaskItem) => {
                         </el-icon>
                         远程查看
                       </el-button>
-                      <span>任务信息</span>
                     </div>
                   </template>
                   <div class="task-details">
@@ -525,6 +526,7 @@ const killTask = async (task: TaskItem) => {
 
   .collapse-title-row {
     display: flex;
+    flex-direction: row-reverse;
     align-items: center;
     justify-content: space-between;
     width: 100%;

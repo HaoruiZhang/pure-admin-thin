@@ -175,10 +175,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
           this.eventMessageIndexArray = [];
           this.messageList = [];
           // this.updateSelectedSessionUrl();
-          this.postMessageToParent({
-            key: "sessionCreated",
-            sessionId: this.currentSession.id
-          });
         });
       // this.createSession();
       // this.artifacts = [];
@@ -795,6 +791,12 @@ export const useADKChatStore = defineStore("adkChatStore", {
         ? this.hideMessageText[0]
         : this.userInput.trim();
       if (!newUserInput && this.selectedFiles?.length <= 0) return;
+      if (!this.messageList.length) {
+        this.postMessageToParent({
+          key: "sessionCreated",
+          sessionId: this.currentSession.id
+        });
+      }
       this.stopSessionPolling();
       this.sendLoading = true;
       if (this.updateSessionInterval) {
@@ -916,7 +918,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
               } else {
                 this.sendLoading = false;
               }
-            }, 8000);
+            }, 20000);
           }
         }
       );
