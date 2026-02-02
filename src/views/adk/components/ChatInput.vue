@@ -13,6 +13,15 @@ function sendMessage() {
   adkStore.sendMessage();
 }
 
+function handleEnter(e: KeyboardEvent) {
+  if (!sendLoading.value) {
+    // 非回复状态，发送消息
+    e.preventDefault();
+    sendMessage();
+  }
+  // 回复状态下，不调用 preventDefault，保持默认的回车换行行为
+}
+
 function stopSSE() {
   adkStore.stopSSE();
   adkStore.sendLoading = false;
@@ -29,7 +38,7 @@ function stopSSE() {
       :rows="3"
       type="textarea"
       placeholder="Ask a question or make a request"
-      @keydown.enter.exact.prevent="sendMessage"
+      @keydown.enter.exact="handleEnter"
     />
     <div style="position: relative; width: 100%; height: 20px">
       <el-button

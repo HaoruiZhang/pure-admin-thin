@@ -16,18 +16,15 @@ export function getSessionListByDays(
   });
 }
 export const getTaskStatus = (item: any) => {
-  const { status, status_ai, subtype = "" } = item;
+  const { status, status_ai } = item;
 
   // 1. 成功状态：主状态完成 且 (AI状态完成 或 是图片类型)
-  if (
-    status === "DONE" &&
-    (status_ai === "DONE" || subtype.startsWith("image/"))
-  ) {
+  if (status === "DONE" && status_ai === "DONE") {
     return "success";
   }
 
   // 2. 失败状态
-  if (status === "FAIL" || status_ai === "FAIL") {
+  if (status === "FAIL" || status_ai === "FAIL" || status_ai === "TIMEOUT") {
     return "error";
   }
 
