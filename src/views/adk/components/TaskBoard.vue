@@ -337,160 +337,163 @@ const killTask = async (task: TaskItem) => {
           <el-empty description="当前会话暂无任务" />
         </div>
         <div v-else class="task-list">
-          <el-card
-            v-for="task in tasks"
-            :key="task.id"
-            class="task-card"
-            shadow="hover"
-            :class="`status-${task.status}`"
+          <template
+            v-for="(task, index) in tasks"
+            :key="task.id + '_index_' + index"
           >
-            <template #header>
-              <div class="card-header">
-                <div class="task-title">
-                  <el-icon class="type-icon" :size="18">
-                    <component :is="task.type === 'script' ? Document : Cpu" />
-                  </el-icon>
-                  <span class="name">{{ task.name }}</span>
-                </div>
-                <div class="status-actions">
-                  <el-button
-                    v-if="task.invocationId"
-                    type="primary"
-                    size="small"
-                    :icon="ChatDotRound"
-                    link
-                    class="jump-btn"
-                    title="跳转到对话"
-                    @click.stop.prevent="jumpToChat(task)"
-                  >
-                    跳转
-                  </el-button>
-                  <el-tag
-                    :type="getStatusColor(task.status)"
-                    effect="light"
-                    size="small"
-                    class="status-tag"
-                  >
-                    {{ getStatusLabel(task.status) }}
-                    <el-icon
-                      v-if="task.status === 'running'"
-                      class="is-loading"
-                    >
-                      <Loading />
+            <el-card
+              v-if="task.question"
+              class="task-card"
+              shadow="hover"
+              :class="`status-${task.status}`"
+            >
+              <template #header>
+                <div class="card-header">
+                  <div class="task-title">
+                    <el-icon class="type-icon" :size="18">
+                      <component
+                        :is="task.type === 'script' ? Document : Cpu"
+                      />
                     </el-icon>
-                  </el-tag>
-                  <el-button
-                    v-if="task.status === 'running'"
-                    type="danger"
-                    size="small"
-                    :icon="Close"
-                    link
-                    class="kill-btn"
-                    @click.stop="killTask(task)"
-                  >
-                    终止
-                  </el-button>
-                </div>
-              </div>
-            </template>
-
-            <div class="card-content">
-              <el-tooltip
-                v-if="task.question"
-                effect="dark"
-                placement="left"
-                popper-class="task-question-tooltip"
-              >
-                <template #content>
-                  <div
-                    class="tooltip-md-content"
-                    v-html="
-                      mdTaskBoard
-                        .render(task.question)
-                        .replace(/<details([^>]*)>/gi, '<details open$1>')
-                    "
-                  />
-                </template>
-                <div
-                  class="question-preview"
-                  @click.stop.prevent="jumpToChat(task)"
-                >
-                  <el-icon><ChatDotRound /></el-icon>
-                  <span class="question-text">{{ task.question }}</span>
-                </div>
-              </el-tooltip>
-              <div v-if="false" class="content-preview">
-                {{ formatContent(task.content) }}
-              </div>
-              <el-collapse class="detail-collapse">
-                <el-collapse-item name="1">
-                  <template #title>
-                    <div class="collapse-title-row">
-                      <span>任务信息</span>
-                      <el-button
-                        v-if="task.details.subtype.startsWith('code')"
-                        link
-                        type="primary"
-                        size="small"
-                        class="task-info-btn"
-                        @click.stop="viewTaskInfo(task)"
-                      >
-                        <el-icon style="margin-right: 4px"
-                          ><Monitor />
-                        </el-icon>
-                        远程查看
-                      </el-button>
-                    </div>
-                  </template>
-                  <div class="task-details">
-                    <div class="detail-item">
-                      <span class="label">Task ID:</span>
-                      <span class="value">{{ task.id }}</span>
-                    </div>
-                    <div v-if="task.details.subtype" class="detail-item">
-                      <span class="label">任务类型:</span>
-                      <span class="value">{{ task.details.subtype }}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="label">程序运行:</span>
-                      <span class="value">{{ task.details.status }}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="label">AI分析:</span>
-                      <span class="value">{{
-                        task.details.status_ai || "-"
-                      }}</span>
-                    </div>
-
-                    <div class="detail-item">
-                      <span class="label">创建时间:</span>
-                      <span class="value">{{
-                        formatDate(task.timestamp)
-                      }}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="label">更新时间:</span>
-                      <span class="value">{{
-                        task.details.updated_at || "-"
-                      }}</span>
-                    </div>
-                    <div v-if="task.details.creator" class="detail-item">
-                      <span class="label">创建人:</span>
-                      <span class="value">{{
-                        task.details.creator || "-"
-                      }}</span>
-                    </div>
-                    <div v-if="task.details.filename" class="detail-item">
-                      <span class="label">脚本文件:</span>
-                      <span class="value">{{
-                        task.details.filename || "-"
-                      }}</span>
-                    </div>
+                    <span class="name">{{ task.name }}</span>
                   </div>
-                </el-collapse-item>
-              </el-collapse>
-            </div>
-          </el-card>
+                  <div class="status-actions">
+                    <el-button
+                      v-if="task.invocationId"
+                      type="primary"
+                      size="small"
+                      :icon="ChatDotRound"
+                      link
+                      class="jump-btn"
+                      title="跳转到对话"
+                      @click.stop.prevent="jumpToChat(task)"
+                    >
+                      跳转
+                    </el-button>
+                    <el-tag
+                      :type="getStatusColor(task.status)"
+                      effect="light"
+                      size="small"
+                      class="status-tag"
+                    >
+                      {{ getStatusLabel(task.status) }}
+                      <el-icon
+                        v-if="task.status === 'running'"
+                        class="is-loading"
+                      >
+                        <Loading />
+                      </el-icon>
+                    </el-tag>
+                    <el-button
+                      v-if="task.status === 'running'"
+                      type="danger"
+                      size="small"
+                      :icon="Close"
+                      link
+                      class="kill-btn"
+                      @click.stop="killTask(task)"
+                    >
+                      终止
+                    </el-button>
+                  </div>
+                </div>
+              </template>
+
+              <div class="card-content">
+                <el-tooltip
+                  v-if="task.question"
+                  effect="dark"
+                  placement="left"
+                  popper-class="task-question-tooltip"
+                >
+                  <template #content>
+                    <div
+                      class="tooltip-md-content"
+                      v-html="
+                        mdTaskBoard
+                          .render(task.question)
+                          .replace(/<details([^>]*)>/gi, '<details open$1>')
+                      "
+                    />
+                  </template>
+                  <div class="question-preview">
+                    <el-icon><ChatDotRound /></el-icon>
+                    <span class="question-text">{{ task.question }}</span>
+                  </div>
+                </el-tooltip>
+                <div v-if="false" class="content-preview">
+                  {{ formatContent(task.content) }}
+                </div>
+                <el-collapse class="detail-collapse">
+                  <el-collapse-item name="1">
+                    <template #title>
+                      <div class="collapse-title-row">
+                        <span>任务信息</span>
+                        <el-button
+                          v-if="task.details.subtype.startsWith('code')"
+                          link
+                          type="primary"
+                          size="small"
+                          class="task-info-btn"
+                          @click.stop="viewTaskInfo(task)"
+                        >
+                          <el-icon style="margin-right: 4px"
+                            ><Monitor />
+                          </el-icon>
+                          远程查看
+                        </el-button>
+                      </div>
+                    </template>
+                    <div class="task-details">
+                      <div class="detail-item">
+                        <span class="label">Task ID:</span>
+                        <span class="value">{{ task.id }}</span>
+                      </div>
+                      <div v-if="task.details.subtype" class="detail-item">
+                        <span class="label">任务类型:</span>
+                        <span class="value">{{ task.details.subtype }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="label">程序运行:</span>
+                        <span class="value">{{ task.details.status }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="label">AI分析:</span>
+                        <span class="value">{{
+                          task.details.status_ai || "-"
+                        }}</span>
+                      </div>
+
+                      <div class="detail-item">
+                        <span class="label">创建时间:</span>
+                        <span class="value">{{
+                          formatDate(task.timestamp)
+                        }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="label">更新时间:</span>
+                        <span class="value">{{
+                          task.details.updated_at || "-"
+                        }}</span>
+                      </div>
+                      <div v-if="task.details.creator" class="detail-item">
+                        <span class="label">创建人:</span>
+                        <span class="value">{{
+                          task.details.creator || "-"
+                        }}</span>
+                      </div>
+                      <div v-if="task.details.filename" class="detail-item">
+                        <span class="label">脚本文件:</span>
+                        <span class="value">{{
+                          task.details.filename || "-"
+                        }}</span>
+                      </div>
+                    </div>
+                  </el-collapse-item>
+                </el-collapse>
+              </div>
+            </el-card>
+          </template>
         </div>
       </el-scrollbar>
     </div>
