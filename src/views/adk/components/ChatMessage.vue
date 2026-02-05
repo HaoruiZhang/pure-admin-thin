@@ -700,7 +700,8 @@ watch(
                   'is-btn-link':
                     item.taskInfo || item.formConfig || item.pptInfo,
                   'has-function-call': item.functionCall,
-                  'is-editing': item.role === 'user' && editingMessageIndex === index
+                  'is-editing':
+                    item.role === 'user' && editingMessageIndex === index
                 }
               ]"
               @click="handleClickMessage(item, index)"
@@ -1133,6 +1134,10 @@ watch(
 
           /* max-width: calc(100% - 176px); */
           max-width: calc(100% - 196px);
+
+          &.is-editing {
+            width: calc(100% - 196px);
+          }
         }
       }
 
