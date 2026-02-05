@@ -847,33 +847,45 @@ export const useADKChatStore = defineStore("adkChatStore", {
           stateDelta: null
         },
         chunk => {
-          if (chunk.startsWith('{"error"')) {
-            console.log("error", chunk);
-            ElMessageBox.confirm(chunk, "Error", {
+          try {
+            const chunkJson = JSON.parse(chunk);
+            console.log("📩chunkJson: ", chunkJson);
+
+            if (chunkJson.error) {
+              ElMessageBox.confirm(
+                chunkJson.user_message ||
+                  chunkJson.error ||
+                  "服务异常, 请联系Fas团队",
+                "Error",
+                {
+                  confirmButtonText: "OK",
+                  type: "error",
+                  center: true
+                }
+              )
+                .then(() => {})
+                .catch(() => {});
+              return;
+            }
+            if (chunkJson.content) {
+              for (const part of chunkJson.content.parts) {
+                index += 1;
+                this.processPart(chunkJson, part, index);
+              }
+            } else if (chunkJson.errorMessage) {
+              console.log("error, chunkJson, index: ", chunkJson, index);
+              this.storeEvents(chunkJson, chunkJson);
+            }
+          } catch (e) {
+            console.log("📩catch e:", e);
+            ElMessageBox.confirm("服务异常, 请联系Fas团队", "Error", {
               confirmButtonText: "OK",
               type: "error",
               center: true
             })
               .then(() => {})
               .catch(() => {});
-            return;
           }
-          const chunkJson = JSON.parse(chunk);
-          // console.log("📩chunkJson: ", chunkJson);
-          if (chunkJson.error) {
-            console.log("error", chunkJson.error);
-            return;
-          }
-          if (chunkJson.content) {
-            for (const part of chunkJson.content.parts) {
-              index += 1;
-              this.processPart(chunkJson, part, index);
-            }
-          } else if (chunkJson.errorMessage) {
-            console.log("error, chunkJson, index: ", chunkJson, index);
-            this.storeEvents(chunkJson, chunkJson);
-          }
-          // 处理
         },
         err => {
           console.error(err);
