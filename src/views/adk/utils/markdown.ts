@@ -57,13 +57,35 @@ export const fixDashList = (text: string) => {
 
 export let currentReserchStepIdx = 0;
 
+const getHeader = (language: string) => {
+  return ["python", "r", "bash"].includes(language)
+    ? `<div class="code-header">
+          <div>${language || ""}</div>
+          <div class="code-action"> 
+            <div class="code-action-btn run-btn" onClick="onRunClick(this)">
+              <span>${t("buttons.run")}</span>
+            </div>
+            <div class="code-action-btn copy-btn" onClick="onCopyClick(this)">
+              <span>${t("buttons.copy")}</span>
+            </div>
+          </div>
+        </div>`
+    : `<div class="code-header">
+          <div>${language || ""}</div>
+          <div class="code-action"> 
+            <div class="code-action-btn copy-btn" onClick="onCopyClick(this)">
+              <span>${t("buttons.copy")}</span>
+            </div>
+          </div>
+        </div>`;
+};
 export const md: MarkdownIt = new MarkdownIt({
   html: true, // 允许渲染 HTML
   // linkify: true,
   // typographer: true,
   breaks: true, // 让单个 \n 也换行
   // 设置代码高亮的配置
-  highlight: function (code, language) {
+  highlight: function (code, language, env: any) {
     // mermaid 代码块由 markdown-it-mermaid 插件处理，跳过 highlight
     if (language === "mermaid") {
       // 将原始代码保存到 data-code 属性中，避免后续渲染时获取到 SVG 内容
@@ -87,28 +109,13 @@ export const md: MarkdownIt = new MarkdownIt({
         hljs.highlight(code, { language: defaultLanguage }).value +
         "</code>";
       codeDom.innerHTML = codeHtml;
-      return (
-        (["python", "r", "bash"].includes(language)
-          ? `<div class="code-header">
-          <div>${language || ""}</div>
-          <div class="code-action"> 
-            <div class="code-action-btn run-btn" onClick="onRunClick(this)">
-              <span>${t("buttons.run")}</span>
-            </div>
-            <div class="code-action-btn copy-btn" onClick="onCopyClick(this)">
-              <span>${t("buttons.copy")}</span>
-            </div>
-          </div>
-        </div>`
-          : `<div class="code-header">
-          <div>${language || ""}</div>
-          <div class="code-action"> 
-            <div class="code-action-btn copy-btn" onClick="onCopyClick(this)">
-              <span>${t("buttons.copy")}</span>
-            </div>
-          </div>
-        </div>`) + codeDom.outerHTML
-      );
+
+      // 如果环境变量中标记了是 taskboard，则不添加 header
+      if (env && env.isTaskBoard) {
+        return `<div class="taskboard-code-wrapper">${codeDom.outerHTML}</div>`;
+      }
+
+      return getHeader(defaultLanguage) + codeDom.outerHTML;
     } catch (e: any) {
       console.log(e);
     }
@@ -309,6 +316,37 @@ export const mdNoBtn: MarkdownIt = new MarkdownIt({
     );
   }
 });
+
+// 为 TaskBoard 创建专门的 MarkdownIt 实例（不显示代码操作按钮）
+export const mdTaskBoard: MarkdownIt = new MarkdownIt({
+  html: true,
+  breaks: true,
+  highlight: function (code, language) {
+    if (language === "mermaid") {
+      const escapedCode = md.utils.escapeHtml(code);
+      return `<pre class="mermaid" data-code="${escapedCode.replace(/"/g, "&quot;")}">${escapedCode}</pre>`;
+    }
+
+    let defaultLanguage = language;
+    if (!(language && hljs.getLanguage(language))) {
+      defaultLanguage = "json";
+    }
+    try {
+      return (
+        `<div class="taskboard-code-wrapper"><pre><code class="hljs language-${defaultLanguage}">` +
+        hljs.highlight(code, { language: defaultLanguage }).value +
+        "</code></pre></div>"
+      );
+    } catch (e: any) {
+      console.log(e);
+    }
+    return (
+      '<pre class="hljs"><code>' + md.utils.escapeHtml(code) + "</code></pre>"
+    );
+  }
+})
+  .use(MarkdownItCollapsible)
+  .disable("code");
 
 // // 自定义 table 渲染
 // const defaultRender = md.renderer.rules.table_open || function(tokens, idx, options, env, self) {

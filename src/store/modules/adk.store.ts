@@ -249,6 +249,22 @@ export const useADKChatStore = defineStore("adkChatStore", {
         this.isProgrammaticScroll = false;
       }, 100);
     },
+    scrollToElement(invocationId: string) {
+      if (!invocationId || !this.scrollRef) return;
+      nextTick(() => {
+        const el = document.querySelector(
+          `[data-invocation-id="${invocationId}"]`
+        );
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          // 添加一个高亮动画效果
+          el.classList.add("highlight-message");
+          setTimeout(() => {
+            el.classList.remove("highlight-message");
+          }, 2000);
+        }
+      });
+    },
     setAutoScrollDownDisabled(disabled: boolean) {
       this.autoScrollDownDisabled = disabled;
     },

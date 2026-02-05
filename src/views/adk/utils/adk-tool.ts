@@ -28,18 +28,31 @@ export const getTaskStatus = (item: any) => {
     return "error";
   }
 
-  // 3. 运行中状态：主状态为 RUNNING 或 AI状态不在终态列表中
+  // 3. 其他状态映射
+  if (status === "CANCEL") {
+    return "canceled";
+  }
+
+  // 4. 运行中状态：主状态为 RUNNING 或 AI状态不在终态列表中
   const finalAIStates = ["DONE", "FAIL", "CANCEL", "TIMEOUT"];
   if (status === "RUNNING" || !finalAIStates.includes(status_ai)) {
     return "running";
   }
 
-  // 4. 其他状态映射
-  if (status === "CANCEL") {
-    return "canceled";
-  }
-
   return "pending";
+};
+
+export const getMessageVisibility = (item: any, adkStore: any) => {
+  return !(
+    (item.text &&
+      item.text.startsWith("<backend-reply-start>") &&
+      !adkStore.isDebugMode) ||
+    (item.functionResponse && !item.pptInfo) ||
+    (item.taskInfo && !adkStore.loginInfo.remoter) ||
+    (item.text &&
+      adkStore.hideMessageText.includes(item.text) &&
+      !adkStore.isDebugMode)
+  );
 };
 
 export const getNewSession = (userId: string = "user"): AdkSession => {

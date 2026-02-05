@@ -3,7 +3,11 @@ import { computed, ref, watch, onBeforeUnmount } from "vue";
 import { storeToRefs } from "pinia";
 import { useADKChatStore } from "@/store/modules/adk.store";
 import { backendService } from "@/api/adk.service";
-import { createPollingController, getTaskStatus } from "@/views/adk/utils";
+import {
+  createPollingController,
+  getTaskStatus,
+  getMessageVisibility
+} from "@/views/adk/utils";
 import type { PollingController } from "@/views/adk/utils";
 import {
   ElDrawer,
@@ -25,8 +29,10 @@ import {
   Document,
   Cpu,
   Monitor,
-  Close
+  Close,
+  ChatDotRound
 } from "@element-plus/icons-vue";
+import { mdTaskBoard } from "../utils/markdown";
 
 const props = defineProps({
   modelValue: {
@@ -43,7 +49,7 @@ const visible = computed({
 });
 
 const adkStore = useADKChatStore();
-const { currentSession } = storeToRefs(adkStore);
+const { currentSession, messageList } = storeToRefs(adkStore);
 
 interface TaskItem {
   id: string | number;
@@ -53,6 +59,8 @@ interface TaskItem {
   content: string;
   timestamp?: number;
   details?: any;
+  question?: string; // 关联的提问内容
+  invocationId?: string; // 关联的调用ID
 }
 
 const taskList = ref<TaskItem[]>([]);
@@ -62,6 +70,35 @@ const taskPolling = ref<PollingController | null>(null);
 // 检查是否有运行中的任务
 const hasRunningTasks = (): boolean => {
   return taskList.value.some(task => task.status === "running");
+};
+
+// 查找任务对应的提问或代码块
+const findQuestionForTask = (invocationId: string) => {
+  if (!invocationId || !messageList.value) return "";
+
+  // 找到该任务对应的消息索引
+  const taskMsgIndex = messageList.value.findIndex(
+    m => m.invocationId === invocationId
+  );
+  if (taskMsgIndex === -1) return "";
+
+  // 1. 优先返回当前消息的内容（通常包含运行的代码块）
+  const currentMsg = messageList.value[taskMsgIndex];
+  if (
+    currentMsg &&
+    currentMsg.text &&
+    getMessageVisibility(currentMsg, adkStore)
+  ) {
+    return currentMsg.text;
+  }
+
+  // 2. 如果当前消息没有内容，则向上查找最近的有文本的消息（通常是用户提问）
+  for (let i = taskMsgIndex - 1; i >= 0; i--) {
+    if (messageList.value[i].text) {
+      return messageList.value[i].text;
+    }
+  }
+  return "";
 };
 
 const fetchTasks = async () => {
@@ -75,15 +112,20 @@ const fetchTasks = async () => {
 
     const tasksData = res?.data?.tasks || [];
 
-    taskList.value = tasksData.map((item: any) => ({
-      id: item.tagname || item.id,
-      type: item.subtype?.startsWith("code/") ? "script" : "function",
-      name: item.filename ? item.filename.split("/").pop() : "Task",
-      status: getTaskStatus(item),
-      content: item.content || item.filename || "",
-      timestamp: item.created_at ? new Date(item.created_at).getTime() : 0,
-      details: item
-    }));
+    taskList.value = tasksData.map((item: any) => {
+      const invocationId = item.tagname || item.id;
+      return {
+        id: invocationId,
+        type: item.subtype?.startsWith("code/") ? "script" : "function",
+        name: item.filename ? item.filename.split("/").pop() : "Task",
+        status: getTaskStatus(item),
+        content: item.content || item.filename || "",
+        timestamp: item.created_at ? new Date(item.created_at).getTime() : 0,
+        details: item,
+        invocationId: invocationId,
+        question: findQuestionForTask(invocationId)
+      };
+    });
 
     // 如果面板打开且没有运行中的任务，停止轮询
     if (visible.value && !hasRunningTasks()) {
@@ -95,6 +137,16 @@ const fetchTasks = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const jumpToChat = (task: TaskItem) => {
+  if (!task.invocationId) return;
+
+  // 关闭任务面板
+  visible.value = false;
+
+  // 使用 store 中的新方法进行跳转
+  adkStore.scrollToElement(String(task.invocationId));
 };
 
 // 启动任务轮询
@@ -301,6 +353,18 @@ const killTask = async (task: TaskItem) => {
                   <span class="name">{{ task.name }}</span>
                 </div>
                 <div class="status-actions">
+                  <el-button
+                    v-if="task.invocationId"
+                    type="primary"
+                    size="small"
+                    :icon="ChatDotRound"
+                    link
+                    class="jump-btn"
+                    title="跳转到对话"
+                    @click.stop.prevent="jumpToChat(task)"
+                  >
+                    跳转
+                  </el-button>
                   <el-tag
                     :type="getStatusColor(task.status)"
                     effect="light"
@@ -308,9 +372,12 @@ const killTask = async (task: TaskItem) => {
                     class="status-tag"
                   >
                     {{ getStatusLabel(task.status) }}
-                    <el-icon v-if="task.status === 'running'" class="is-loading"
-                      ><Loading
-                    /></el-icon>
+                    <el-icon
+                      v-if="task.status === 'running'"
+                      class="is-loading"
+                    >
+                      <Loading />
+                    </el-icon>
                   </el-tag>
                   <el-button
                     v-if="task.status === 'running'"
@@ -328,7 +395,31 @@ const killTask = async (task: TaskItem) => {
             </template>
 
             <div class="card-content">
-              <div class="content-preview">
+              <el-tooltip
+                v-if="task.question"
+                effect="dark"
+                placement="left"
+                popper-class="task-question-tooltip"
+              >
+                <template #content>
+                  <div
+                    class="tooltip-md-content"
+                    v-html="
+                      mdTaskBoard
+                        .render(task.question)
+                        .replace(/<details([^>]*)>/gi, '<details open$1>')
+                    "
+                  />
+                </template>
+                <div
+                  class="question-preview"
+                  @click.stop.prevent="jumpToChat(task)"
+                >
+                  <el-icon><ChatDotRound /></el-icon>
+                  <span class="question-text">{{ task.question }}</span>
+                </div>
+              </el-tooltip>
+              <div v-if="false" class="content-preview">
                 {{ formatContent(task.content) }}
               </div>
               <el-collapse class="detail-collapse">
@@ -495,6 +586,34 @@ const killTask = async (task: TaskItem) => {
 }
 
 .card-content {
+  .question-preview {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: var(--el-text-color-regular);
+    background-color: var(--el-fill-color-light);
+    border-radius: 4px;
+
+    .el-icon {
+      flex-shrink: 0;
+      color: var(--el-color-primary);
+      opacity: 0.7;
+    }
+
+    .question-text {
+      display: -webkit-box;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      -webkit-line-clamp: 3;
+      word-break: break-word;
+      white-space: normal;
+      -webkit-box-orient: vertical;
+    }
+  }
+
   .content-preview {
     display: -webkit-box;
     margin-bottom: 8px;
@@ -551,6 +670,143 @@ const killTask = async (task: TaskItem) => {
   white-space: pre-wrap;
   background: #f4f4f5;
   border-radius: 4px;
+}
+
+.tooltip-md-content {
+  max-width: 450px;
+  max-height: 500px;
+  padding: 4px;
+  overflow-y: auto;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #e1e1e1;
+
+  :deep(p) {
+    margin: 0 0 12px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  :deep(code) {
+    padding: 2px 5px;
+    margin: 0 2px;
+    font-family: "Fira Code", monospace;
+    font-size: 0.9em;
+    color: #ff7875;
+    background-color: rgb(255 255 255 / 10%);
+    border-radius: 3px;
+  }
+
+  :deep(pre) {
+    padding: 6px;
+    // margin: 12px 0;
+    overflow-x: auto;
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 6px;
+
+    code {
+      padding: 0;
+      margin: 0;
+      color: #dcdcdc;
+      background-color: transparent;
+    }
+  }
+
+  :deep(.taskboard-code-wrapper) {
+    position: relative;
+    margin: 12px 0;
+
+    pre {
+      padding: 6px;
+      margin: 0;
+      overflow-x: auto;
+      background-color: #1e1e1e !important;
+      border: 1px solid #333 !important;
+      border-radius: 6px;
+
+      code {
+        padding: 0;
+        color: #dcdcdc !important;
+        background-color: transparent !important;
+      }
+    }
+  }
+
+  :deep(details) {
+    margin: 10px 0;
+    border: 1px solid #444;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+
+    summary {
+      padding: 8px 12px;
+      font-weight: 500;
+      color: #aaa;
+      cursor: pointer;
+      outline: none;
+      list-style: none;
+      background-color: rgb(255 255 255 / 5%);
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+
+      &:hover {
+        color: #ddd;
+        background-color: rgb(255 255 255 / 8%);
+      }
+
+      &::before {
+        display: inline-block;
+        width: 12px;
+        margin-right: 8px;
+        content: "▶";
+        transition: transform 0.2s;
+      }
+    }
+
+    &[open] {
+      summary {
+        border-bottom: 1px solid #444;
+
+        &::before {
+          transform: rotate(90deg);
+        }
+      }
+
+      .thought-content {
+        padding: 12px;
+        font-style: italic;
+        color: #999;
+        background-color: rgb(0 0 0 / 10%);
+      }
+    }
+  }
+
+  :deep(ul),
+  :deep(ol) {
+    padding-left: 20px;
+    margin: 10px 0;
+  }
+
+  :deep(blockquote) {
+    padding-left: 12px;
+    margin: 12px 0;
+    color: #999;
+    border-left: 4px solid #555;
+  }
 }
 
 .task-details {

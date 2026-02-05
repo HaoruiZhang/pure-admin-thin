@@ -9,6 +9,7 @@ import { Edit, Document, ArrowDown } from "@element-plus/icons-vue";
 import { md } from "../utils/markdown";
 import { onCopyDom, onRunDom } from "../utils";
 import { useADKChatStore } from "@/store/modules/adk.store";
+import { getMessageVisibility } from "@/views/adk/utils/adk-tool";
 const adkStore = useADKChatStore();
 const {
   messageList,
@@ -667,18 +668,7 @@ watch(
           :key="(item.eventId ?? 'user_') + index"
         >
           <div
-            v-if="
-              !(
-                //括号里的条件不显示在面板上
-                (
-                  (item.text &&
-                    item.text.startsWith('<backend-reply-start>')) ||
-                  (item.functionResponse && !item.pptInfo) ||
-                  (item.taskInfo && !loginInfo.remoter) ||
-                  (item.text && adkStore.hideMessageText.includes(item.text))
-                )
-              )
-            "
+            v-if="getMessageVisibility(item, adkStore)"
             :ref="
               el => (el ? (messageRef[index] = el) : delete messageRef[index])
             "
@@ -709,7 +699,8 @@ watch(
                     item.pptInfo,
                   'is-btn-link':
                     item.taskInfo || item.formConfig || item.pptInfo,
-                  'has-function-call': item.functionCall
+                  'has-function-call': item.functionCall,
+                  'is-editing': item.role === 'user' && editingMessageIndex === index
                 }
               ]"
               @click="handleClickMessage(item, index)"
@@ -875,6 +866,7 @@ watch(
                   <div
                     :class="[
                       'message-html',
+                      'message-md-content',
                       { collapsed: isMessageCollapsed(item, index) }
                     ]"
                   >
@@ -1119,6 +1111,10 @@ watch(
   /* margin-top: 16px; */
   border-radius: 8px;
 
+  :deep(.highlight-message) {
+    animation: highlight-pulse 2s ease-out;
+  }
+
   .message-list-inner {
     .message-box {
       display: flex;
@@ -1208,6 +1204,27 @@ watch(
 
         &.is-btn-link:active {
           color: var(--el-color-primary);
+        }
+
+        .message-md-content {
+          :deep(p) {
+            margin: 0 0 12px;
+
+            &:last-child {
+              margin-bottom: 0;
+            }
+          }
+
+          :deep(ul),
+          :deep(ol) {
+            padding-left: 20px;
+            margin: 10px 0;
+
+            :deep(code) {
+              color: #7d0301;
+              background-color: #f4f4f4;
+            }
+          }
         }
 
         .message-actions-row-margin {
@@ -1733,6 +1750,23 @@ watch(
 }
 </style>
 <style scoped>
+@keyframes highlight-pulse {
+  0% {
+    background-color: transparent;
+    box-shadow: 0 0 0 0 rgb(125 37 188 / 0%);
+  }
+
+  20% {
+    background-color: rgb(125 37 188 / 15%);
+    box-shadow: 0 0 15px 2px rgb(125 37 188 / 30%);
+  }
+
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 0 rgb(125 37 188 / 0%);
+  }
+}
+
 @keyframes dotting {
   25% {
     box-shadow: 4px 0 0 #333;
@@ -1861,7 +1895,7 @@ a:any-link {
   align-items: center;
   justify-content: space-between;
   height: 32px;
-  padding: 16px;
+  padding: 16px 12px;
   color: #414855;
   background: #ebedf0;
   border-radius: 4px 4px 0 0;
