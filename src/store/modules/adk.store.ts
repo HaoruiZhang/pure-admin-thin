@@ -252,11 +252,12 @@ export const useADKChatStore = defineStore("adkChatStore", {
     scrollToElement(invocationId: string) {
       if (!invocationId || !this.scrollRef) return;
       nextTick(() => {
-        const el = document.querySelector(
+        const els = document.querySelectorAll(
           `[data-invocation-id="${invocationId}"]`
         );
+        const el = els.length > 0 ? els[els.length - 2] : null;
         if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
           // 添加一个高亮动画效果
           el.classList.add("highlight-message");
           setTimeout(() => {
@@ -1018,6 +1019,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       // 主动停止
       this.sseController?.stop?.();
       this.sendLoading = false;
+      this.streamingTextMessage = null;
     }
   }
 });
