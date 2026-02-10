@@ -627,7 +627,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         } else if (part.text.includes("```")) {
           const { language } = extractScriptContent(part.text);
           if (["python", "r", "bash"].includes(language)) {
-            this.isUserNewMessage && this.startSessionPolling(2);
+            // this.isUserNewMessage && this.startSessionPolling(2);
             this.insertMessageBeforeLoadingMessage([
               message,
               {
@@ -744,10 +744,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
     },
 
     handleFinalMessageIfFormConfig() {
-      console.log(
-        "🛠️📦【runSse完成, 手动处理最后一条消息, messages: 】",
-        this.messageList
-      ); // green
+      console.log("🛠️📦【手动处理最后一条消息, messages: 】", this.messageList);
 
       const lastMessage = this.messageList[this.messageList.length - 1];
       if (!lastMessage?.text) return;
@@ -784,7 +781,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       } else if (lastMessage.text.includes("```")) {
         const { language } = extractScriptContent(lastMessage.text);
         if (["python", "r", "bash"].includes(language)) {
-          this.isUserNewMessage && this.startSessionPolling(2);
+          // this.isUserNewMessage && this.startSessionPolling(2);
           this.insertMessageBeforeLoadingMessage([
             lastMessage,
             {
@@ -910,7 +907,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         },
         // complete 回调
         async () => {
-          console.log("🏁🏁🏁runSSE回复结束, 处理最后一条消息🏁🏁🏁");
+          console.log("🏁🏁🏁runSSE回复结束🏁🏁🏁");
           this.handleFinalMessageIfFormConfig();
           this.isUserNewMessage = false;
           const sessionDetail = (await adkService.getSessionDetail(
@@ -928,26 +925,83 @@ export const useADKChatStore = defineStore("adkChatStore", {
             }
             this.parseSessionDetail(sessionDetail);
           }
-          // window.parent.postMessage(
-          //   {
-          //     key: "isFinalResponse",
-          //     type: "3️⃣_isFinalResponse",
-          //     sessionId: this.currentSession.id,
-          //     value: true
-          //   },
-          //   "*"
-          // );
           if (this.specifiedMimePath) {
             this.specifiedMimePath = "";
             this.startSessionPolling(4);
           } else {
-            setTimeout(async () => {
-              if (await this.checkTaskRunning()) {
-                this.startSessionPolling(5);
-              } else {
-                this.sendLoading = false;
+            // 检查最后一条消息是否包含代码块，决定最大轮询时间
+            const lastMsg = this.messageList[this.messageList.length - 1];
+            const hasCodeBlock = lastMsg?.text?.includes("```");
+            const maxPollingTime = hasCodeBlock ? 60000 : 6000;
+            const pollingInterval = 3000;
+            let elapsedTime = 0;
+            console.log(
+              `⏱️ SSE完成后轮询检测: 最大等待${maxPollingTime / 1000}秒, ${hasCodeBlock ? "检测到代码块" : "无代码块"}`
+            );
+
+            const pollOnce = async () => {
+              elapsedTime += pollingInterval;
+
+              try {
+                // 每次轮询都更新页面信息
+                const sessionDetail = (await adkService.getSessionDetail(
+                  this.user_info.user_id,
+                  this.currentSession.id
+                )) as AdkSession;
+
+                if (sessionDetail) {
+                  const hasUpdates =
+                    sessionDetail?.lastUpdateTime !==
+                      this.lastSessionSyncTime ||
+                    (sessionDetail?.events?.length ?? 0) !==
+                      (this.currentSession?.events?.length ?? 0);
+
+                  this.currentSession = sessionDetail;
+                  this.lastSessionSyncTime = sessionDetail.lastUpdateTime;
+
+                  // 如果有新的事件更新，刷新页面并进入 _startSessionPolling
+                  if (hasUpdates) {
+                    this.parseSessionDetail(sessionDetail);
+                    console.log(
+                      "🔄 检测到新的会话更新，进入 _startSessionPolling"
+                    );
+                    this.startSessionPolling(6);
+                    return;
+                  }
+                }
+              } catch (err) {
+                console.error("❌ 轮询更新页面信息失败:", err);
               }
-            }, 20000);
+
+              // 查询任务状态
+              try {
+                const taskRunning = await this.checkTaskRunning();
+                if (taskRunning) {
+                  console.log(
+                    "✅ 检测到运行中的任务，进入 _startSessionPolling"
+                  );
+                  this.startSessionPolling(7);
+                  return;
+                }
+              } catch (err) {
+                console.error("❌ 查询任务状态失败:", err);
+              }
+
+              // 超过最大轮询时间仍未检测到任务，停止轮询
+              if (elapsedTime >= maxPollingTime) {
+                console.log(
+                  `⏱️ 已达最大等待时间${maxPollingTime / 1000}秒，未检测到运行中任务，停止轮询`
+                );
+                this.sendLoading = false;
+                return;
+              }
+
+              // 当前轮次完成后，等待 interval 再执行下一轮
+              setTimeout(pollOnce, pollingInterval);
+            };
+
+            // 首次延迟后开始轮询
+            setTimeout(pollOnce, pollingInterval);
           }
         }
       );

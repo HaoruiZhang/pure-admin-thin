@@ -221,17 +221,22 @@ class PureHttp {
     return this.request<T>("get", url, params, config);
   }
 }
-console.log(
-  "🤪🤪🤪🤪🤪 agentHttp[adk]",
-  import.meta.env.VITE_ENV_MODE + ":backendUrl",
-  localStorage.getItem(import.meta.env.VITE_ENV_MODE + ":backendUrl")
+
+let backendUrl = localStorage.getItem(
+  import.meta.env.VITE_ENV_MODE + ":backendUrl"
 );
+if (!backendUrl || backendUrl === "null") {
+  localStorage.setItem(
+    import.meta.env.VITE_ENV_MODE + ":backendUrl",
+    import.meta.env.VITE_URL_AGENT_BACKEND
+  );
+  backendUrl = import.meta.env.VITE_URL_AGENT_BACKEND;
+}
+console.log("🤪🤪🤪🤪🤪 agentHttp[adk]", backendUrl);
 export const http = new PureHttp();
 export const agentHttp = new PureHttp({
   ...defaultConfig,
-  baseURL:
-    localStorage.getItem(import.meta.env.VITE_ENV_MODE + ":backendUrl") ||
-    import.meta.env.VITE_URL_AGENT_BACKEND,
+  baseURL: backendUrl,
   withCredentials: false
 });
 
