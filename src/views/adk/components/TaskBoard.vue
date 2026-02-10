@@ -160,7 +160,7 @@ const startTaskPolling = () => {
     task: async () => {
       await fetchTasks();
     },
-    interval: 3000, // 每3秒刷新一次
+    interval: 20000, // 每3秒刷新一次
     immediate: false, // 不立即执行，因为已经在打开时执行了一次
     autoStart: true
   });
