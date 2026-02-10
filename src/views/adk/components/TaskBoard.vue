@@ -76,29 +76,21 @@ const hasRunningTasks = (): boolean => {
 const findQuestionForTask = (invocationId: string) => {
   if (!invocationId || !messageList.value) return "";
 
-  // 找到该任务对应的消息索引
-  const taskMsgIndex = messageList.value.findIndex(
-    m => m.invocationId === invocationId
-  );
-  if (taskMsgIndex === -1) return "";
-
-  // 1. 优先返回当前消息的内容（通常包含运行的代码块）
-  const currentMsg = messageList.value[taskMsgIndex];
-  if (
-    currentMsg &&
-    currentMsg.text &&
-    getMessageVisibility(currentMsg, adkStore)
-  ) {
-    return currentMsg.text;
-  }
-
-  // 2. 如果当前消息没有内容，则向上查找最近的有文本的消息（通常是用户提问）
-  for (let i = taskMsgIndex - 1; i >= 0; i--) {
-    if (messageList.value[i].text) {
-      return messageList.value[i].text;
-    }
-  }
-  return "";
+  // 找到该任务对应的消息索引（取倒数第二条匹配的）
+  const matchedIndices: number[] = [];
+  messageList.value.forEach((m, i) => {
+    if (
+      m.invocationId === invocationId &&
+      m.role !== "user" &&
+      m.text &&
+      getMessageVisibility(m, adkStore) &&
+      !m.taskInfo
+    )
+      matchedIndices.push(i);
+  });
+  return matchedIndices.length > 0
+    ? messageList.value[matchedIndices[matchedIndices.length - 1]].text
+    : "";
 };
 
 const fetchTasks = async () => {
