@@ -83,7 +83,9 @@ onMounted(async () => {
               @click="handleClickSession(session)"
             >
               <div class="session-header dark:text-white!">
-                <span>{{ session.state.title || "新对话" }}</span>
+                <span :title="session.state.title || '新对话'">{{
+                  session.state.title || "新对话"
+                }}</span>
               </div>
             </div>
           </template>
@@ -108,7 +110,9 @@ onMounted(async () => {
               @click="handleClickSession(session)"
             >
               <div class="session-header dark:text-white!">
-                <span>{{ session.state.title || "新对话" }}</span>
+                <span :title="session.state.title || '新对话'">{{
+                  session.state.title || "新对话"
+                }}</span>
               </div>
             </div>
           </template>
@@ -132,7 +136,9 @@ onMounted(async () => {
               @click="handleClickSession(session)"
             >
               <div class="session-header dark:text-white!">
-                <span>{{ session.state.title || "新对话" }}</span>
+                <span :title="session.state.title || '新对话'">{{
+                  session.state.title || "新对话"
+                }}</span>
               </div>
             </div>
           </template></el-scrollbar
@@ -210,12 +216,21 @@ onMounted(async () => {
       height: 32px;
       padding: 0 8px;
 
+      .session-header {
+        width: 100%;
+        overflow: hidden;
+      }
+
       span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
         font-size: 14px;
         font-style: normal;
         font-weight: 400;
         line-height: 22px; /* 157.143% */
         color: #45537a;
+        white-space: nowrap;
       }
 
       &:hover {
