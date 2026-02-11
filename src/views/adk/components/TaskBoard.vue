@@ -30,7 +30,8 @@ import {
   Cpu,
   Monitor,
   Close,
-  ChatDotRound
+  ChatDotRound,
+  MagicStick
 } from "@element-plus/icons-vue";
 import { mdTaskBoard } from "../utils/markdown";
 
@@ -254,6 +255,45 @@ const getStatusLabel = (status: string) => {
   return map[status] || status;
 };
 
+// 原始状态映射（用于拆分展示程序运行和AI分析状态）
+const getRawStatusColor = (status: string) => {
+  switch (status) {
+    case "DONE":
+      return "success";
+    case "FAIL":
+    case "TIMEOUT":
+      return "danger";
+    case "RUNNING":
+      return "primary";
+    case "CANCEL":
+      return "info";
+    default:
+      return "warning";
+  }
+};
+
+// 连线状态映射
+const getLineClass = (task: any) => {
+  const pStatus = task.details.status;
+  // 程序完成，连线变绿
+  if (pStatus === "DONE") return "active-success";
+  // 程序失败，连线变红（可选，或者保持灰）
+  if (pStatus === "FAIL" || pStatus === "TIMEOUT") return "active-danger";
+  return "";
+};
+
+const getRawStatusLabel = (status: string) => {
+  const map: Record<string, string> = {
+    DONE: "完成",
+    FAIL: "失败",
+    RUNNING: "运行",
+    CANCEL: "取消",
+    TIMEOUT: "超时",
+    PENDING: "等待"
+  };
+  return map[status] || status || "-";
+};
+
 // Formatting helpers
 const formatContent = (content: string) => {
   if (!content) return "";
@@ -350,43 +390,86 @@ const killTask = async (task: TaskItem) => {
                     <span class="name">{{ task.name }}</span>
                   </div>
                   <div class="status-actions">
-                    <el-button
-                      v-if="task.invocationId"
-                      type="primary"
-                      size="small"
-                      :icon="ChatDotRound"
-                      link
-                      class="jump-btn"
-                      title="跳转到对话"
-                      @click.stop.prevent="jumpToChat(task)"
+                    <el-tooltip
+                      content="跳转到对话"
+                      placement="top"
+                      :show-after="500"
                     >
-                      跳转
-                    </el-button>
-                    <el-tag
-                      :type="getStatusColor(task.status)"
-                      effect="light"
-                      size="small"
-                      class="status-tag"
-                    >
-                      {{ getStatusLabel(task.status) }}
-                      <el-icon
-                        v-if="task.status === 'running'"
-                        class="is-loading"
+                      <el-button
+                        v-if="task.invocationId"
+                        type="primary"
+                        size="small"
+                        :icon="ChatDotRound"
+                        link
+                        class="jump-btn"
+                        @click.stop.prevent="jumpToChat(task)"
+                      />
+                    </el-tooltip>
+                    <div class="status-stepper">
+                      <!-- 节点1：程序 -->
+                      <el-tooltip
+                        :content="
+                          '程序: ' + getRawStatusLabel(task.details.status)
+                        "
+                        placement="top"
                       >
-                        <Loading />
-                      </el-icon>
-                    </el-tag>
-                    <el-button
-                      v-if="task.status === 'running'"
-                      type="danger"
-                      size="small"
-                      :icon="Close"
-                      link
-                      class="kill-btn"
-                      @click.stop="killTask(task)"
+                        <div
+                          class="step-node"
+                          :class="getRawStatusColor(task.details.status)"
+                        >
+                          <el-icon class="node-icon"><Monitor /></el-icon>
+                          <div class="status-dot" />
+                        </div>
+                      </el-tooltip>
+
+                      <!-- 连接线 -->
+                      <div class="step-line" :class="getLineClass(task)">
+                        <div class="line-inner" />
+                      </div>
+
+                      <!-- 节点2：AI -->
+                      <el-tooltip
+                        :content="
+                          'AI: ' + getRawStatusLabel(task.details.status_ai)
+                        "
+                        placement="top"
+                      >
+                        <div
+                          class="step-node"
+                          :class="getRawStatusColor(task.details.status_ai)"
+                        >
+                          <el-icon class="node-icon"><MagicStick /></el-icon>
+                          <el-icon
+                            v-if="
+                              task.details.status_ai &&
+                              task.details.status_ai !== 'DONE' &&
+                              task.details.status_ai !== 'FAIL' &&
+                              task.details.status_ai !== 'CANCEL' &&
+                              task.details.status_ai !== 'TIMEOUT'
+                            "
+                            class="is-loading"
+                          >
+                            <Loading />
+                          </el-icon>
+                          <div v-else class="status-dot" />
+                        </div>
+                      </el-tooltip>
+                    </div>
+                    <el-tooltip
+                      content="终止任务"
+                      placement="top"
+                      :show-after="500"
                     >
-                      终止
-                    </el-button>
+                      <el-button
+                        v-if="task.status === 'running'"
+                        type="danger"
+                        size="small"
+                        :icon="Close"
+                        link
+                        class="kill-btn"
+                        @click.stop="killTask(task)"
+                      />
+                    </el-tooltip>
                   </div>
                 </div>
               </template>
@@ -570,12 +653,101 @@ const killTask = async (task: TaskItem) => {
 
   .status-actions {
     display: flex;
-    gap: 8px;
+    flex-shrink: 0; /* 防止被挤压 */
+    gap: 2px;
     align-items: center;
 
+    .status-stepper {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      padding: 4px 8px;
+      margin: 0 4px;
+      background-color: #f7f9fc;
+      border-radius: 16px; // 胶囊形状
+
+      .step-node {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        color: #c0c4cc; // 默认灰色
+
+        .node-icon {
+          font-size: 16px;
+        }
+
+        .status-dot {
+          position: absolute;
+          right: -2px;
+          bottom: -2px;
+          width: 6px;
+          height: 6px;
+          background-color: #dcdfe6;
+          border: 1px solid #fff;
+          border-radius: 50%;
+        }
+
+        &.success {
+          color: var(--el-color-success);
+
+          .status-dot {
+            background-color: var(--el-color-success);
+          }
+        }
+
+        &.danger {
+          color: var(--el-color-danger);
+
+          .status-dot {
+            background-color: var(--el-color-danger);
+          }
+        }
+
+        &.primary,
+        &.active-success {
+          color: var(--el-color-primary);
+
+          .status-dot {
+            background-color: var(--el-color-primary);
+          }
+        }
+
+        .is-loading {
+          position: absolute;
+          right: -4px;
+          bottom: -4px;
+          font-size: 10px;
+          color: var(--el-color-primary);
+        }
+      }
+
+      .step-line {
+        position: relative;
+        width: 24px;
+        height: 2px;
+        background-color: #e4e7ed;
+        border-radius: 1px;
+
+        &.active-success {
+          background-color: var(--el-color-success);
+        }
+
+        &.active-danger {
+          background-color: var(--el-color-danger);
+        }
+
+        &.active-primary {
+          background-color: var(--el-color-primary);
+        }
+      }
+    }
+
+    .jump-btn,
     .kill-btn {
-      padding: 0 4px;
-      font-size: 12px;
+      font-size: 14px; /* 图标稍微大一点 */
     }
   }
 }
