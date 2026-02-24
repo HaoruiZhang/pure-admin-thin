@@ -201,6 +201,64 @@ export function extractScriptContent(str: string) {
   return { language: "", content: rawContent };
 }
 
+export enum CUSTOM_FIELD_TAGS {
+  FORM,
+  EXTEND
+}
+
+const extractMap = new Map<CUSTOM_FIELD_TAGS, any>([
+  [
+    CUSTOM_FIELD_TAGS.FORM,
+    {
+      startTag: "<FORM_CONFIG>",
+      endTag: "</FORM_CONFIG>"
+    }
+  ],
+  [
+    CUSTOM_FIELD_TAGS.EXTEND,
+    {
+      startTag: "<USER_NEXT_QUESTIONS>\n",
+      endTag: "\n</USER_NEXT_QUESTIONS>"
+    }
+  ]
+]);
+
+export function extractCustomFields(str: string, tag: CUSTOM_FIELD_TAGS) {
+  const { startTag, endTag } = extractMap.get(tag)!;
+  const result = [];
+
+  // 用于存储剩余字符串的部分
+  let remaining = "";
+  let lastIndex = 0;
+
+  // 查找所有匹配的字段
+  let startIndex = str.indexOf(startTag);
+  while (startIndex !== -1) {
+    const contentStartIndex = startIndex + startTag.length;
+    const endIndex = str.indexOf(endTag, contentStartIndex);
+
+    if (endIndex === -1) break; // 未找到结束标记
+
+    // 提取被包裹的内容
+    const content = str.substring(contentStartIndex, endIndex);
+    result.push(content);
+
+    // 收集本次匹配前的字符串
+    remaining += str.substring(lastIndex, startIndex);
+
+    // 更新最后处理的索引位置
+    lastIndex = endIndex + endTag.length;
+
+    // 查找下一个匹配
+    startIndex = str.indexOf(startTag, lastIndex);
+  }
+
+  // 添加最后一部分字符串
+  remaining += str.substring(lastIndex);
+
+  return [remaining, result];
+}
+
 export function extractFormConfigs(str: string) {
   const startTag = "<FORM_CONFIG>";
   const endTag = "</FORM_CONFIG>";

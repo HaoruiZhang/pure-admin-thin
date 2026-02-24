@@ -9,6 +9,8 @@ import {
   formatBase64Data,
   extractScriptContent,
   extractFormConfigs,
+  extractCustomFields,
+  CUSTOM_FIELD_TAGS,
   getQueryFromId,
   startSse,
   processThoughtText,
@@ -607,7 +609,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
               window.parent.postMessage(
                 {
                   key: "userFormConfig",
-                  type: "1️⃣userFormConfig",
+                  type: "userFormConfig",
                   data: fields
                 },
                 "*"
@@ -625,6 +627,23 @@ export const useADKChatStore = defineStore("adkChatStore", {
           } else {
             this.insertMessageBeforeLoadingMessage([message]);
           }
+        } else if (part.text.includes("<USER_NEXT_QUESTIONS>")) {
+          const [cleanedText, fields] = extractCustomFields(
+            part.text,
+            CUSTOM_FIELD_TAGS.EXTEND
+          );
+          // 将推荐问题按换行拆分，过滤空行
+          const suggestedQuestions = (fields[0] || "")
+            .split("\n")
+            .map((q: string) => q.trim())
+            .filter((q: string) => q.length > 0);
+          console.log(
+            "🛠️📦【处理推荐问题, suggestedQuestions: 】",
+            suggestedQuestions
+          );
+          message.text = cleanedText || "";
+          message.suggestedQuestions = suggestedQuestions;
+          this.insertMessageBeforeLoadingMessage([message]);
         } else if (
           message.author !== "root_agent" &&
           part.text.includes("```")

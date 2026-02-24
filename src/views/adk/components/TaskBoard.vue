@@ -475,27 +475,34 @@ const killTask = async (task: TaskItem) => {
               </template>
 
               <div class="card-content">
-                <el-tooltip
-                  v-if="task.question"
-                  effect="dark"
-                  placement="left"
-                  popper-class="task-question-tooltip"
-                >
-                  <template #content>
-                    <div
-                      class="tooltip-md-content"
-                      v-html="
-                        mdTaskBoard
-                          .render(task.question)
-                          .replace(/<details([^>]*)>/gi, '<details open$1>')
-                      "
-                    />
-                  </template>
-                  <div class="question-preview">
+                <div class="question-preview">
+                  <el-tooltip
+                    content="跳转到对话"
+                    placement="top"
+                    :show-after="500"
+                  >
                     <el-icon><ChatDotRound /></el-icon>
+                  </el-tooltip>
+                  <el-tooltip
+                    v-if="task.question"
+                    effect="dark"
+                    placement="left"
+                    popper-class="task-question-tooltip"
+                  >
+                    <template #content>
+                      <div
+                        class="tooltip-md-content"
+                        v-html="
+                          mdTaskBoard
+                            .render(task.question)
+                            .replace(/<details([^>]*)>/gi, '<details open$1>')
+                        "
+                      />
+                    </template>
                     <span class="question-text">{{ task.question }}</span>
-                  </div>
-                </el-tooltip>
+                  </el-tooltip>
+                </div>
+
                 <div v-if="false" class="content-preview">
                   {{ formatContent(task.content) }}
                 </div>

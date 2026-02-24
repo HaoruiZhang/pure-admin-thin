@@ -626,6 +626,13 @@ onMounted(async () => {
   );
 });
 
+// 点击推荐问题，自动发送
+const handleSuggestedQuestion = (question: string) => {
+  if (sendLoading.value) return;
+  adkStore.userInput = question;
+  adkStore.sendMessage();
+};
+
 onUnmounted(() => {
   (window as any).onCopyClick = null;
   (window as any).onRunClick = null;
@@ -1060,6 +1067,28 @@ watch(
                   </div>
                 </div>
               </div>
+
+              <!-- 推荐问题 -->
+              <div
+                v-if="
+                  item.suggestedQuestions && item.suggestedQuestions.length > 0
+                "
+                class="suggested-questions"
+              >
+                <div class="suggested-questions-label">你可能想问：</div>
+                <div class="suggested-questions-list">
+                  <button
+                    v-for="(question, qIdx) in item.suggestedQuestions"
+                    :key="qIdx"
+                    class="suggested-question-btn"
+                    :disabled="sendLoading"
+                    @click="handleSuggestedQuestion(question)"
+                  >
+                    {{ question }}
+                  </button>
+                </div>
+              </div>
+
               <div class="message-actions-row-margin">
                 <el-button
                   v-if="
@@ -1340,6 +1369,47 @@ watch(
         .collapse-btn {
           align-self: flex-start;
           padding: 0;
+        }
+
+        .suggested-questions {
+          padding-top: 10px;
+          margin-top: 12px;
+          border-top: 1px solid var(--el-border-color-lighter);
+
+          .suggested-questions-label {
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: var(--el-text-color-secondary);
+          }
+
+          .suggested-questions-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+
+          .suggested-question-btn {
+            padding: 6px 14px;
+            font-size: 13px;
+            line-height: 1.4;
+            color: var(--el-color-primary);
+            cursor: pointer;
+            background-color: var(--el-color-primary-light-9);
+            border: 1px solid var(--el-color-primary-light-5);
+            border-radius: 16px;
+            transition: all 0.25s ease;
+
+            &:hover:not(:disabled) {
+              color: #fff;
+              background-color: var(--el-color-primary);
+              border-color: var(--el-color-primary);
+            }
+
+            &:disabled {
+              cursor: not-allowed;
+              opacity: 0.5;
+            }
+          }
         }
 
         .ppt-container {
