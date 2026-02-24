@@ -626,6 +626,11 @@ onMounted(async () => {
   );
 });
 
+// 判断是否为最后一组推荐问题（后面没有更多消息时才显示）
+const isLastSuggestedQuestions = (index: number) => {
+  return !messageList.value.slice(index + 1).some((msg: any) => msg.role);
+};
+
 // 点击推荐问题，自动发送
 const handleSuggestedQuestion = (question: string) => {
   if (sendLoading.value) return;
@@ -1071,7 +1076,9 @@ watch(
               <!-- 推荐问题 -->
               <div
                 v-if="
-                  item.suggestedQuestions && item.suggestedQuestions.length > 0
+                  item.suggestedQuestions &&
+                  item.suggestedQuestions.length > 0 &&
+                  isLastSuggestedQuestions(index)
                 "
                 class="suggested-questions"
               >

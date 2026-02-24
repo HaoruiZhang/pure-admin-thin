@@ -768,14 +768,16 @@ export const useADKChatStore = defineStore("adkChatStore", {
 
     handleFinalMessageIfFormConfig() {
       console.log("🛠️📦【手动处理最后一条消息, messages: 】", this.messageList);
+      let maxPollingTime = 4000;
       const lastMessage = this.messageList[this.messageList.length - 1];
-      if (!lastMessage?.text) return;
+      if (!lastMessage?.text) return 0;
       this.messageList.pop();
       lastMessage.eventId = localStorage.getItem("finalEventId")!;
       lastMessage.invocationId = localStorage.getItem("finalInvocationId")!;
       if (lastMessage.text.includes("<FORM_CONFIG>")) {
         const [cleanedText, fields] = extractFormConfigs(lastMessage.text);
         if (cleanedText && fields.length) {
+          maxPollingTime = 0;
           lastMessage.text = cleanedText;
           lastMessage.userFormConfig = fields;
           this.userFormConfig = fields;
@@ -806,6 +808,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       ) {
         const { language } = extractScriptContent(lastMessage.text);
         if (["python", "r", "bash"].includes(language)) {
+          maxPollingTime = 60000;
           // this.isUserNewMessage && this.startSessionPolling(2);
           this.insertMessageBeforeLoadingMessage([
             lastMessage,
@@ -823,6 +826,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       } else {
         this.insertMessageBeforeLoadingMessage([lastMessage]);
       }
+      return maxPollingTime;
     },
 
     async sendMessage(autoInput = false) {
@@ -933,7 +937,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
         // complete 回调
         async () => {
           console.log("🏁🏁🏁runSSE回复结束🏁🏁🏁");
-          this.handleFinalMessageIfFormConfig();
+          const maxPollingTime = this.handleFinalMessageIfFormConfig();
           this.isUserNewMessage = false;
           const sessionDetail = (await adkService.getSessionDetail(
             this.user_info.user_id,
@@ -955,13 +959,10 @@ export const useADKChatStore = defineStore("adkChatStore", {
             this.startSessionPolling(4);
           } else {
             // 检查最后一条消息是否包含代码块，决定最大轮询时间
-            const lastMsg = this.messageList[this.messageList.length - 1];
-            const hasCodeBlock = lastMsg?.text?.includes("```");
-            const maxPollingTime = hasCodeBlock ? 60000 : 16000;
             const pollingInterval = 8000;
             let elapsedTime = 0;
             console.log(
-              `⏱️ SSE完成后轮询检测: 最大等待${maxPollingTime / 1000}秒, ${hasCodeBlock ? "检测到代码块" : "无代码块"}`
+              `⏱️ SSE完成后轮询检测: 最大等待${maxPollingTime / 1000}秒`
             );
 
             const pollOnce = async () => {
@@ -997,7 +998,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
               } catch (err) {
                 console.error("❌ 轮询更新页面信息失败:", err);
               }
-
               // 查询任务状态
               try {
                 const taskRunning = await this.checkTaskRunning();
