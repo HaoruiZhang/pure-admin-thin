@@ -5,7 +5,12 @@ import mermaid from "mermaid";
 import { storeToRefs } from "pinia";
 import { ElMessage, ElLoading } from "element-plus";
 import { taskService } from "@/api/adk.service";
-import { Edit, Document, ArrowDown } from "@element-plus/icons-vue";
+import {
+  Edit,
+  Document,
+  ArrowDown,
+  CopyDocument
+} from "@element-plus/icons-vue";
 import { md } from "../utils/markdown";
 import { onCopyDom, onRunDom } from "../utils";
 import { useADKChatStore } from "@/store/modules/adk.store";
@@ -40,6 +45,8 @@ const COLLAPSE_PREVIEW_LENGTH = 1200; // 预览长度
 
 const expandedMessageKeys = ref<Set<string>>(new Set());
 const expandedFunctionCalls = ref<Set<string>>(new Set());
+const highlightedMessageIndex = ref<number | null>(null);
+let highlightTimer: ReturnType<typeof setTimeout> | null = null;
 const markdownCache = new Map<string, { text: string; html: string }>();
 const showDelayedLoading = ref(false);
 const downloadingPdfPath = ref("");
@@ -62,6 +69,39 @@ const cancelEditMessage = () => {
   editingMessageIndex.value = null;
   editingText.value = "";
   originalText.value = "";
+};
+
+const copyMessage = async (text: string) => {
+  if (!text) return;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      ElMessage.success("复制成功");
+    } else {
+      throw new Error("Clipboard API unavailable");
+    }
+  } catch (e) {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      if (successful) {
+        ElMessage.success("复制成功");
+      } else {
+        ElMessage.error("复制失败");
+      }
+    } catch (err) {
+      console.error("Copy failed:", err);
+      ElMessage.error("复制失败");
+    }
+  }
 };
 
 // 确认编辑并重新发送
@@ -468,6 +508,8 @@ const isMessageCollapsed = (item: any, index: number) => {
 
 const toggleMessageCollapse = (item: any, index: number) => {
   const key = getMessageKey(item, index);
+  const isCollapsing = expandedMessageKeys.value.has(key);
+
   setExpandedMessageKeys(prev => {
     const next = new Set(prev);
     if (next.has(key)) {
@@ -481,6 +523,29 @@ const toggleMessageCollapse = (item: any, index: number) => {
     // 预渲染全文，避免展开瞬间卡顿
     cacheMarkdown(`full-${key}`, item?.text || "");
   }
+
+  // 先清除上一次高亮
+  if (highlightTimer) {
+    clearTimeout(highlightTimer);
+    highlightTimer = null;
+  }
+  highlightedMessageIndex.value = null;
+
+  nextTick(() => {
+    // 触发高亮
+    highlightedMessageIndex.value = index;
+    highlightTimer = setTimeout(() => {
+      highlightedMessageIndex.value = null;
+      highlightTimer = null;
+    }, 2500);
+
+    if (isCollapsing) {
+      const el = messageRef.value[index];
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+  });
 };
 
 const getCollapsedPreviewHtml = (item: any, index: number) => {
@@ -642,6 +707,10 @@ onUnmounted(() => {
   (window as any).onCopyClick = null;
   (window as any).onRunClick = null;
   clearDelayedLoadingTimer();
+  if (highlightTimer) {
+    clearTimeout(highlightTimer);
+    highlightTimer = null;
+  }
 });
 
 watch(
@@ -682,13 +751,16 @@ watch(
           <div
             v-if="getMessageVisibility(item, adkStore)"
             :ref="
-              el => (el ? (messageRef[index] = el) : delete messageRef[index])
+              (el: any) => {
+                if (el) messageRef[index] = el;
+              }
             "
             :class="[
               'message-box',
               {
                 'from-user': item.role === 'user',
-                'function-call-message': item.functionCall
+                'function-call-message': item.functionCall,
+                'highlight-message': highlightedMessageIndex === index
               }
             ]"
             :data-event-id="item.eventId ?? ''"
@@ -713,7 +785,8 @@ watch(
                     item.taskInfo || item.formConfig || item.pptInfo,
                   'has-function-call': item.functionCall,
                   'is-editing':
-                    item.role === 'user' && editingMessageIndex === index
+                    item.role === 'user' && editingMessageIndex === index,
+                  'highlight-content': highlightedMessageIndex === index
                 }
               ]"
               @click="handleClickMessage(item, index)"
@@ -898,9 +971,11 @@ watch(
                       class="message-html-gradient"
                     />
                   </div>
-                  <div class="message-actions-row">
+                  <div
+                    v-if="shouldCollapseText(item.text)"
+                    class="message-actions-row"
+                  >
                     <el-button
-                      v-if="shouldCollapseText(item.text)"
                       class="collapse-btn"
                       link
                       type="primary"
@@ -1096,7 +1171,25 @@ watch(
                 </div>
               </div>
 
-              <div class="message-actions-row-margin">
+              <div
+                v-if="
+                  item.text &&
+                  !item.formConfig &&
+                  !item.taskInfo &&
+                  !item.pptInfo
+                "
+                class="message-actions-row-margin"
+              >
+                <el-button
+                  class="copy-btn"
+                  link
+                  type="primary"
+                  @click.stop="copyMessage(item.text)"
+                >
+                  <el-icon>
+                    <CopyDocument />
+                  </el-icon>
+                </el-button>
                 <el-button
                   v-if="
                     item.role === 'user' &&
@@ -1147,10 +1240,6 @@ watch(
 
   /* margin-top: 16px; */
   border-radius: 8px;
-
-  :deep(.highlight-message) {
-    animation: highlight-pulse 2s ease-out;
-  }
 
   .message-list-inner {
     .message-box {
@@ -1222,6 +1311,12 @@ watch(
         border-radius: 8px;
         box-shadow: rgb(199 199 199 / 50%) 0 2px 8px 0;
 
+        &.highlight-content {
+          position: relative;
+          z-index: 1;
+          animation: highlight-pulse 2s ease-out;
+        }
+
         &.flex-width {
           /* 暂时用不到 */
           width: unset;
@@ -1271,13 +1366,16 @@ watch(
         .message-actions-row-margin {
           position: absolute;
           right: 4px;
-          bottom: -20px;
+          bottom: -24px;
+          display: flex;
 
-          .edit-btn {
+          /* gap: 4px; */
+
+          .edit-btn,
+          .copy-btn {
             padding: 0;
             font-size: 14px;
-
-            /* opacity: 0; */
+            opacity: 0;
             transition: opacity 0.2s;
 
             .el-icon {
@@ -1286,7 +1384,8 @@ watch(
           }
         }
 
-        &:hover .edit-btn {
+        &:hover .edit-btn,
+        &:hover .copy-btn {
           opacity: 1;
         }
 
@@ -1400,6 +1499,7 @@ watch(
             font-size: 13px;
             line-height: 1.4;
             color: var(--el-color-primary);
+            text-align: left;
             cursor: pointer;
             background-color: var(--el-color-primary-light-9);
             border: 1px solid var(--el-color-primary-light-5);
@@ -1830,8 +1930,7 @@ watch(
     list-style: unset;
   } */
 }
-</style>
-<style scoped>
+
 @keyframes highlight-pulse {
   0% {
     background-color: transparent;
@@ -1848,7 +1947,8 @@ watch(
     box-shadow: 0 0 0 0 rgb(125 37 188 / 0%);
   }
 }
-
+</style>
+<style scoped>
 @keyframes dotting {
   25% {
     box-shadow: 4px 0 0 #333;

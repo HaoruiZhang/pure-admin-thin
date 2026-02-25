@@ -264,6 +264,7 @@ const getRawStatusColor = (status: string) => {
     case "TIMEOUT":
       return "danger";
     case "RUNNING":
+    case "Running":
       return "primary";
     case "CANCEL":
       return "info";
@@ -275,10 +276,18 @@ const getRawStatusColor = (status: string) => {
 // 连线状态映射
 const getLineClass = (task: any) => {
   const pStatus = task.details.status;
-  // 程序完成，连线变绿
-  if (pStatus === "DONE") return "active-success";
-  // 程序失败，连线变红（可选，或者保持灰）
+  const isTaskRunning = task.status === "running";
+
+  // 程序完成
+  if (pStatus === "DONE") {
+    // 如果程序完成了，但整个任务还在运行，说明正在进行后续步骤（AI分析），给连线加流光效果
+    if (isTaskRunning) return "active-success-running";
+    return "active-success";
+  }
+  // 程序失败
   if (pStatus === "FAIL" || pStatus === "TIMEOUT") return "active-danger";
+  // 程序运行中
+  if (pStatus === "RUNNING" || pStatus === "Running") return "active-running";
   return "";
 };
 
@@ -373,208 +382,199 @@ const killTask = async (task: TaskItem) => {
             v-for="(task, index) in tasks"
             :key="task.id + '_index_' + index"
           >
-            <el-card
+            <div
               v-if="task.question"
-              class="task-card"
-              shadow="hover"
+              class="task-card-new"
               :class="`status-${task.status}`"
             >
-              <template #header>
-                <div class="card-header">
-                  <div class="task-title">
-                    <el-icon class="type-icon" :size="18">
+              <!-- 1. 顶部区域：类型图标 + 名称 + 基础操作 -->
+              <div class="card-top-row">
+                <div class="task-identity">
+                  <div class="icon-wrapper">
+                    <el-icon :size="18">
                       <component
                         :is="task.type === 'script' ? Document : Cpu"
                       />
                     </el-icon>
-                    <span class="name">{{ task.name }}</span>
                   </div>
-                  <div class="status-actions">
-                    <el-tooltip
-                      content="跳转到对话"
-                      placement="top"
-                      :show-after="500"
+                  <div class="name-col">
+                    <span class="task-name" :title="task.name">{{
+                      task.name
+                    }}</span>
+                    <span class="task-id" :title="task.id.toString()"
+                      >#{{ task.id.toString() }}</span
                     >
-                      <el-button
-                        v-if="task.invocationId"
-                        type="primary"
-                        size="small"
-                        :icon="ChatDotRound"
-                        link
-                        class="jump-btn"
-                        @click.stop.prevent="jumpToChat(task)"
-                      />
-                    </el-tooltip>
-                    <div class="status-stepper">
-                      <!-- 节点1：程序 -->
-                      <el-tooltip
-                        :content="
-                          '程序: ' + getRawStatusLabel(task.details.status)
-                        "
-                        placement="top"
-                      >
-                        <div
-                          class="step-node"
-                          :class="getRawStatusColor(task.details.status)"
-                        >
-                          <el-icon class="node-icon"><Monitor /></el-icon>
-                          <div class="status-dot" />
-                        </div>
-                      </el-tooltip>
-
-                      <!-- 连接线 -->
-                      <div class="step-line" :class="getLineClass(task)">
-                        <div class="line-inner" />
-                      </div>
-
-                      <!-- 节点2：AI -->
-                      <el-tooltip
-                        :content="
-                          'AI: ' + getRawStatusLabel(task.details.status_ai)
-                        "
-                        placement="top"
-                      >
-                        <div
-                          class="step-node"
-                          :class="getRawStatusColor(task.details.status_ai)"
-                        >
-                          <el-icon class="node-icon"><MagicStick /></el-icon>
-                          <el-icon
-                            v-if="
-                              task.details.status_ai &&
-                              task.details.status_ai !== 'DONE' &&
-                              task.details.status_ai !== 'FAIL' &&
-                              task.details.status_ai !== 'CANCEL' &&
-                              task.details.status_ai !== 'TIMEOUT'
-                            "
-                            class="is-loading"
-                          >
-                            <Loading />
-                          </el-icon>
-                          <div v-else class="status-dot" />
-                        </div>
-                      </el-tooltip>
-                    </div>
-                    <el-tooltip
-                      content="终止任务"
-                      placement="top"
-                      :show-after="500"
-                    >
-                      <el-button
-                        v-if="task.status === 'running'"
-                        type="danger"
-                        size="small"
-                        :icon="Close"
-                        link
-                        class="kill-btn"
-                        @click.stop="killTask(task)"
-                      />
-                    </el-tooltip>
                   </div>
                 </div>
-              </template>
-
-              <div class="card-content">
-                <div class="question-preview">
+                <div class="top-actions">
                   <el-tooltip
                     content="跳转到对话"
                     placement="top"
                     :show-after="500"
                   >
-                    <el-icon><ChatDotRound /></el-icon>
+                    <el-button
+                      v-if="task.invocationId"
+                      type="primary"
+                      size="small"
+                      :icon="ChatDotRound"
+                      link
+                      class="action-btn"
+                      @click.stop.prevent="jumpToChat(task)"
+                      >跳转</el-button
+                    >
                   </el-tooltip>
                   <el-tooltip
-                    v-if="task.question"
-                    effect="dark"
-                    placement="left"
-                    popper-class="task-question-tooltip"
+                    content="终止任务"
+                    placement="top"
+                    :show-after="500"
                   >
-                    <template #content>
-                      <div
-                        class="tooltip-md-content"
-                        v-html="
-                          mdTaskBoard
-                            .render(task.question)
-                            .replace(/<details([^>]*)>/gi, '<details open$1>')
-                        "
-                      />
-                    </template>
-                    <span class="question-text">{{ task.question }}</span>
+                    <el-button
+                      v-if="task.status === 'running'"
+                      type="danger"
+                      size="small"
+                      :icon="Close"
+                      link
+                      class="action-btn kill-btn"
+                      @click.stop="killTask(task)"
+                      >终止</el-button
+                    >
                   </el-tooltip>
                 </div>
-
-                <div v-if="false" class="content-preview">
-                  {{ formatContent(task.content) }}
-                </div>
-                <el-collapse class="detail-collapse">
-                  <el-collapse-item name="1">
-                    <template #title>
-                      <div class="collapse-title-row">
-                        <span>任务信息</span>
-                        <el-button
-                          v-if="task.details.subtype.startsWith('code')"
-                          link
-                          type="primary"
-                          size="small"
-                          class="task-info-btn"
-                          @click.stop="viewTaskInfo(task)"
-                        >
-                          <el-icon style="margin-right: 4px"
-                            ><Monitor />
-                          </el-icon>
-                          远程查看
-                        </el-button>
-                      </div>
-                    </template>
-                    <div class="task-details">
-                      <div class="detail-item">
-                        <span class="label">Task ID:</span>
-                        <span class="value">{{ task.id }}</span>
-                      </div>
-                      <div v-if="task.details.subtype" class="detail-item">
-                        <span class="label">任务类型:</span>
-                        <span class="value">{{ task.details.subtype }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">程序运行:</span>
-                        <span class="value">{{ task.details.status }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">AI分析:</span>
-                        <span class="value">{{
-                          task.details.status_ai || "-"
-                        }}</span>
-                      </div>
-
-                      <div class="detail-item">
-                        <span class="label">创建时间:</span>
-                        <span class="value">{{
-                          formatDate(task.timestamp)
-                        }}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">更新时间:</span>
-                        <span class="value">{{
-                          task.details.updated_at || "-"
-                        }}</span>
-                      </div>
-                      <div v-if="task.details.creator" class="detail-item">
-                        <span class="label">创建人:</span>
-                        <span class="value">{{
-                          task.details.creator || "-"
-                        }}</span>
-                      </div>
-                      <div v-if="task.details.filename" class="detail-item">
-                        <span class="label">脚本文件:</span>
-                        <span class="value">{{
-                          task.details.filename || "-"
-                        }}</span>
-                      </div>
-                    </div>
-                  </el-collapse-item>
-                </el-collapse>
               </div>
-            </el-card>
+
+              <!-- 2. 中间区域：问题预览 -->
+              <div class="question-box">
+                <el-tooltip
+                  v-if="task.question"
+                  effect="dark"
+                  placement="left"
+                  popper-class="task-question-tooltip"
+                >
+                  <template #content>
+                    <div
+                      class="tooltip-md-content"
+                      v-html="
+                        mdTaskBoard
+                          .render(task.question)
+                          .replace(/<details([^>]*)>/gi, '<details open$1>')
+                      "
+                    />
+                  </template>
+                  <div class="question-text">{{ task.question }}</div>
+                </el-tooltip>
+              </div>
+
+              <!-- 3. 底部区域：状态流水线 -->
+              <div class="status-pipeline">
+                <!-- 节点1：程序运行 -->
+                <div class="pipeline-node">
+                  <div
+                    class="node-icon-circle"
+                    :class="getRawStatusColor(task.details.status)"
+                  >
+                    <el-icon><Monitor /></el-icon>
+                  </div>
+                  <div class="node-info">
+                    <span class="node-label">程序运行</span>
+                    <span
+                      class="node-status"
+                      :class="getRawStatusColor(task.details.status)"
+                    >
+                      {{ getRawStatusLabel(task.details.status) }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- 连接线 -->
+                <div class="pipeline-line" :class="getLineClass(task)">
+                  <div class="line-fill" />
+                </div>
+
+                <!-- 节点2：AI分析 -->
+                <div class="pipeline-node">
+                  <div
+                    class="node-icon-circle"
+                    :class="[
+                      getRawStatusColor(task.details.status_ai),
+                      {
+                        'is-pending-running':
+                          task.status === 'running' &&
+                          !['DONE', 'FAIL', 'TIMEOUT', 'CANCEL'].includes(
+                            task.details.status_ai
+                          )
+                      }
+                    ]"
+                  >
+                    <el-icon
+                      v-if="
+                        task.details.status_ai === 'RUNNING' ||
+                        task.details.status_ai === 'Running'
+                      "
+                      class="is-loading"
+                    >
+                      <Loading />
+                    </el-icon>
+                    <el-icon v-else><MagicStick /></el-icon>
+                  </div>
+                  <div class="node-info">
+                    <span class="node-label">AI分析</span>
+                    <span
+                      class="node-status"
+                      :class="getRawStatusColor(task.details.status_ai)"
+                    >
+                      {{ getRawStatusLabel(task.details.status_ai) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 4. 底部元信息栏 -->
+              <div class="footer-meta-row">
+                <span class="time-label">{{ formatDate(task.timestamp) }}</span>
+                <el-popover placement="top" :width="300" trigger="click">
+                  <template #reference>
+                    <el-button link size="small" class="detail-btn"
+                      >详情</el-button
+                    >
+                  </template>
+                  <div class="task-details-popover">
+                    <div class="detail-item">
+                      <span class="label">Task ID:</span>
+                      <span class="value">{{ task.id }}</span>
+                    </div>
+                    <div v-if="task.details.subtype" class="detail-item">
+                      <span class="label">任务类型:</span>
+                      <span class="value">{{ task.details.subtype }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="label">更新时间:</span>
+                      <span class="value">{{
+                        task.details.updated_at || "-"
+                      }}</span>
+                    </div>
+                    <div v-if="task.details.filename" class="detail-item">
+                      <span class="label">脚本文件:</span>
+                      <span class="value">{{
+                        task.details.filename || "-"
+                      }}</span>
+                    </div>
+                    <div
+                      v-if="task.details.subtype.startsWith('code')"
+                      class="detail-actions"
+                    >
+                      <el-button
+                        link
+                        type="primary"
+                        size="small"
+                        @click.stop="viewTaskInfo(task)"
+                      >
+                        远程查看代码
+                      </el-button>
+                    </div>
+                  </div>
+                </el-popover>
+              </div>
+            </div>
           </template>
         </div>
       </el-scrollbar>
@@ -583,6 +583,32 @@ const killTask = async (task: TaskItem) => {
 </template>
 
 <style scoped lang="scss">
+
+
+@keyframes pulse-border {
+  0% {
+    box-shadow: 0 0 0 0 var(--el-color-primary-light-5);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px var(--el-color-primary-light-9);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 var(--el-color-primary-light-9);
+  }
+}
+
+@keyframes loading-line {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 .task-board-container {
   display: flex;
   flex-direction: column;
@@ -610,16 +636,29 @@ const killTask = async (task: TaskItem) => {
   padding: 0 16px 20px;
 }
 
-.task-card {
-  border: none;
+.task-card-new {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background-color: #fff;
   border-left: 4px solid transparent;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgb(0 0 0 / 5%);
   transition: all 0.3s;
+
+  &:hover {
+    box-shadow: 0 4px 16px 0 rgb(0 0 0 / 10%);
+    transform: translateY(-2px);
+  }
 
   &.status-success {
     border-left-color: var(--el-color-success);
   }
 
   &.status-running {
+    background-color: var(--el-color-primary-light-9);
     border-left-color: var(--el-color-primary);
   }
 
@@ -631,205 +670,298 @@ const killTask = async (task: TaskItem) => {
     border-left-color: var(--el-color-info);
   }
 
-  :deep(.el-card__header) {
-    padding: 12px 16px;
-    border-bottom: 1px solid #f0f0f0;
-  }
-
-  :deep(.el-card__body) {
-    padding: 12px 16px;
-  }
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  .task-title {
+  /* 1. Top Row */
+  .card-top-row {
     display: flex;
-    gap: 8px;
-    align-items: center;
-    font-weight: 600;
-    color: #303133;
+    align-items: flex-start;
+    justify-content: space-between;
 
-    .type-icon {
-      color: #909399;
-    }
-  }
-
-  .status-actions {
-    display: flex;
-    flex-shrink: 0; /* 防止被挤压 */
-    gap: 2px;
-    align-items: center;
-
-    .status-stepper {
+    .task-identity {
       display: flex;
-      gap: 4px;
+      gap: 10px;
       align-items: center;
-      padding: 4px 8px;
-      margin: 0 4px;
-      background-color: #f7f9fc;
-      border-radius: 16px; // 胶囊形状
 
-      .step-node {
-        position: relative;
+      .icon-wrapper {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 24px;
-        height: 24px;
-        color: #c0c4cc; // 默认灰色
-
-        .node-icon {
-          font-size: 16px;
-        }
-
-        .status-dot {
-          position: absolute;
-          right: -2px;
-          bottom: -2px;
-          width: 6px;
-          height: 6px;
-          background-color: #dcdfe6;
-          border: 1px solid #fff;
-          border-radius: 50%;
-        }
-
-        &.success {
-          color: var(--el-color-success);
-
-          .status-dot {
-            background-color: var(--el-color-success);
-          }
-        }
-
-        &.danger {
-          color: var(--el-color-danger);
-
-          .status-dot {
-            background-color: var(--el-color-danger);
-          }
-        }
-
-        &.primary,
-        &.active-success {
-          color: var(--el-color-primary);
-
-          .status-dot {
-            background-color: var(--el-color-primary);
-          }
-        }
-
-        .is-loading {
-          position: absolute;
-          right: -4px;
-          bottom: -4px;
-          font-size: 10px;
-          color: var(--el-color-primary);
-        }
+        width: 36px;
+        height: 36px;
+        color: var(--el-color-primary);
+        background-color: var(--el-color-primary-light-9);
+        border-radius: 8px;
       }
 
-      .step-line {
-        position: relative;
-        width: 24px;
-        height: 2px;
-        background-color: #e4e7ed;
-        border-radius: 1px;
+      .name-col {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.2;
 
-        &.active-success {
-          background-color: var(--el-color-success);
+        .task-name {
+          max-width: 200px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-size: 14px;
+          font-weight: 600;
+          color: #303133;
+          white-space: nowrap;
         }
 
-        &.active-danger {
-          background-color: var(--el-color-danger);
-        }
-
-        &.active-primary {
-          background-color: var(--el-color-primary);
+        .task-id {
+          max-width: 200px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-family: monospace;
+          font-size: 12px;
+          color: #909399;
+          white-space: nowrap;
         }
       }
     }
 
-    .jump-btn,
-    .kill-btn {
-      font-size: 14px; /* 图标稍微大一点 */
+    .top-actions {
+      display: flex;
+      gap: 4px;
+
+      .action-btn {
+        padding: 4px;
+        font-size: 14px;
+        color: #909399;
+
+        &.kill-btn {
+          margin-left: 0;
+        }
+
+        &:hover {
+          color: var(--el-color-primary);
+          background-color: var(--el-fill-color-light);
+        }
+
+        &.kill-btn:hover {
+          color: var(--el-color-danger);
+        }
+      }
     }
   }
-}
 
-.card-content {
-  .question-preview {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    padding: 8px;
-    margin-bottom: 8px;
+  /* 2. Question Box */
+  .question-box {
+    padding: 10px 12px;
     font-size: 13px;
-    color: var(--el-text-color-regular);
-    background-color: var(--el-fill-color-light);
-    border-radius: 4px;
-
-    .el-icon {
-      flex-shrink: 0;
-      color: var(--el-color-primary);
-      opacity: 0.7;
-    }
+    line-height: 1.6;
+    color: #555;
+    background-color: #f8f9fa;
+    border-radius: 8px;
 
     .question-text {
       display: -webkit-box;
       overflow: hidden;
       text-overflow: ellipsis;
-      -webkit-line-clamp: 3;
-      word-break: break-word;
-      white-space: normal;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
       -webkit-box-orient: vertical;
     }
   }
 
-  .content-preview {
-    display: -webkit-box;
+  /* 3. Pipeline */
+  .status-pipeline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
     margin-bottom: 8px;
-    overflow: hidden;
-    -webkit-line-clamp: 2;
-    font-size: 13px;
-    line-height: 1.5;
-    color: #606266;
-    -webkit-box-orient: vertical;
+
+    .pipeline-node {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+
+      .node-icon-circle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+        color: #c0c4cc;
+        background-color: #fff;
+        border: 2px solid #e4e7ed;
+        border-radius: 50%;
+        transition: all 0.3s;
+
+        &.success {
+          color: #fff;
+          background-color: var(--el-color-success);
+          border-color: var(--el-color-success);
+        }
+
+        &.danger {
+          color: #fff;
+          background-color: var(--el-color-danger);
+          border-color: var(--el-color-danger);
+        }
+
+        &.primary {
+          color: var(--el-color-primary);
+          border-color: var(--el-color-primary);
+
+          /* 增强阴影可见度 */
+          box-shadow: 0 0 0 4px var(--el-color-primary-light-8);
+          animation: pulse-border 2s infinite;
+        }
+
+        .is-loading {
+          animation: rotating 2s linear infinite;
+        }
+      }
+
+      .is-pending-running {
+        color: var(--el-color-primary);
+        border-color: var(--el-color-primary-light-5);
+        box-shadow: 0 0 0 2px var(--el-color-primary-light-8);
+        animation: pulse-border 2s infinite;
+      }
+
+      .node-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 1.2;
+
+        .node-label {
+          font-size: 12px;
+          color: #909399;
+        }
+
+        .node-status {
+          font-size: 12px;
+          font-weight: 500;
+          color: #c0c4cc;
+
+          &.success {
+            color: var(--el-color-success);
+          }
+
+          &.danger {
+            color: var(--el-color-danger);
+          }
+
+          &.primary {
+            color: var(--el-color-primary);
+          }
+        }
+      }
+    }
+
+    .pipeline-line {
+      position: relative;
+      flex: 1;
+      height: 2px;
+      margin: 0 12px;
+      margin-bottom: 34px; /* Align with circles center (28px circle + 6px gap + ~34px text block) -> center is 14px from top */
+      background-color: #e4e7ed;
+
+      .line-fill {
+        width: 0;
+        height: 100%;
+        background-color: var(--el-color-success);
+        transition: width 0.3s;
+      }
+
+      &.active-success .line-fill {
+        width: 100%;
+      }
+
+      &.active-danger {
+        background-color: var(--el-color-danger);
+      }
+
+      &.active-running {
+        /* 使用更明显的渐变色 */
+        background: linear-gradient(
+          90deg,
+          #e4e7ed 25%,
+          var(--el-color-primary) 50%,
+          #e4e7ed 75%
+        );
+        background-size: 200% 100%;
+        animation: loading-line 1.5s infinite linear;
+
+        /* 确保覆盖原背景 */
+        .line-fill {
+          display: none;
+        }
+      }
+
+      &.active-success-running {
+        /* 绿色基础，加流光 */
+        background: linear-gradient(
+          90deg,
+          var(--el-color-success) 25%,
+          #95d475 50%,
+          var(--el-color-success) 75%
+        );
+        background-size: 200% 100%;
+        animation: loading-line 1.5s infinite linear;
+
+        .line-fill {
+          display: none;
+        }
+      }
+    }
+  }
+
+  /* 4. Footer Meta */
+  .footer-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px dashed #ebeef5;
+
+    .time-label {
+      font-size: 12px;
+      color: #909399;
+    }
+
+    .detail-btn {
+      font-size: 12px;
+    }
   }
 }
 
-.detail-collapse {
-  :deep(.el-collapse-item__header) {
-    height: 32px;
-    font-size: 12px;
-    color: var(--el-color-primary);
-    border: none;
-  }
+.task-details-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 
-  :deep(.el-collapse-item__wrap) {
-    background: transparent;
-    border: none;
-  }
-
-  :deep(.el-collapse-item__content) {
-    padding-bottom: 0;
-  }
-
-  .collapse-title-row {
+  .detail-item {
     display: flex;
-    flex-direction: row-reverse;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding-right: 8px;
+    font-size: 12px;
 
-    .task-info-btn {
-      font-size: 12px;
-      // padding: 0 8px;
+    .label {
+      width: 70px;
+      color: #909399;
+    }
+
+    .value {
+      flex: 1;
+      color: #606266;
+      word-break: break-all;
     }
   }
+
+  .detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+}
+
+/* Remove old styles if unused, or keep for compatibility if mixed */
+.task-card {
+  display: none; /* Hide old cards */
 }
 
 .code-block {

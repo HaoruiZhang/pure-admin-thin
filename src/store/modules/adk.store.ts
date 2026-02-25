@@ -961,6 +961,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
             // 检查最后一条消息是否包含代码块，决定最大轮询时间
             const pollingInterval = 8000;
             let elapsedTime = 0;
+            this.scrollToBottomSmooth();
             console.log(
               `⏱️ SSE完成后轮询检测: 最大等待${maxPollingTime / 1000}秒`
             );
