@@ -44,14 +44,17 @@ export const getTaskStatus = (item: any) => {
 
 export const getMessageVisibility = (item: any, adkStore: any) => {
   return !(
-    (item.text &&
-      item.text.startsWith("<backend-reply-start>") &&
-      !adkStore.isDebugMode) ||
-    (item.functionResponse && !item.pptInfo) ||
-    (item.taskInfo && !adkStore.loginInfo.remoter) ||
-    (item.text &&
-      adkStore.hideMessageText.includes(item.text) &&
-      !adkStore.isDebugMode)
+    (
+      (item.text &&
+        item.text.startsWith("<backend-reply-start>") &&
+        !adkStore.isDebugMode) ||
+      (item.functionResponse && !item.pptInfo) ||
+      (item.taskInfo && !adkStore.loginInfo.remoter) ||
+      (item.text &&
+        adkStore.hideMessageText.includes(item.text) &&
+        !adkStore.isDebugMode)
+    )
+    // ||  (item.text && item.thought)
   );
 };
 

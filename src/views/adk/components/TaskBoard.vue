@@ -583,8 +583,6 @@ const killTask = async (task: TaskItem) => {
 </template>
 
 <style scoped lang="scss">
-
-
 @keyframes pulse-border {
   0% {
     box-shadow: 0 0 0 0 var(--el-color-primary-light-5);
@@ -698,7 +696,7 @@ const killTask = async (task: TaskItem) => {
         line-height: 1.2;
 
         .task-name {
-          max-width: 200px;
+          max-width: 240px;
           overflow: hidden;
           text-overflow: ellipsis;
           font-size: 14px;
@@ -708,7 +706,7 @@ const killTask = async (task: TaskItem) => {
         }
 
         .task-id {
-          max-width: 200px;
+          max-width: 240px;
           overflow: hidden;
           text-overflow: ellipsis;
           font-family: monospace;

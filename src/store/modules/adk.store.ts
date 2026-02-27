@@ -201,7 +201,6 @@ export const useADKChatStore = defineStore("adkChatStore", {
     },
     storeEvents(part: any, e: any) {
       let title = "";
-      // console.log("▶️ 存储事件:  part: ", part, " e: ", e, " index: ", index);
 
       if (part.text) {
         title += "text:" + part.text;
@@ -219,6 +218,7 @@ export const useADKChatStore = defineStore("adkChatStore", {
       e.title = title;
       this.eventData.set(e.id, e);
       this.eventData = new Map(this.eventData);
+      // console.log("▶️ 存储事件完成:  eventData: ", this.eventData);
     },
 
     async scrollToBottomSmooth() {

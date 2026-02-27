@@ -40,7 +40,7 @@ const messageRef = ref<any[]>([]);
 const scrollRef = ref<any>(null);
 const messageInnerRef = ref<HTMLElement | null>(null);
 
-const COLLAPSE_THRESHOLD = 4000; // 字符阈值，超过则折叠
+const COLLAPSE_THRESHOLD = 2500; // 字符阈值，超过则折叠
 const COLLAPSE_PREVIEW_LENGTH = 1200; // 预览长度
 
 const expandedMessageKeys = ref<Set<string>>(new Set());
