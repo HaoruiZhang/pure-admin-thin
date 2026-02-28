@@ -1038,25 +1038,14 @@ export const useADKChatStore = defineStore("adkChatStore", {
       const renderedContent =
         chunkJson.groundingMetadata?.searchEntryPoint?.renderedContent;
       if (part.text) {
+        const isThought = part.thought ? true : false;
         this.isModelThinkingSubject = false;
         const newChunk = part.text;
-        if (part.thought) {
-          if (newChunk !== this.latestThought) {
-            this.storeEvents(part, chunkJson);
-            const thoughtMessage = {
-              role: "bot",
-              text: processThoughtText(newChunk),
-              thought: true,
-              eventId: chunkJson.id
-            };
-            this.insertMessageBeforeLoadingMessage(thoughtMessage);
-          }
-          this.latestThought = newChunk;
-        } else if (!this.streamingTextMessage) {
+        if (!this.streamingTextMessage) {
           this.streamingTextMessage = {
             role: "bot",
             text: processThoughtText(newChunk),
-            thought: part.thought ? true : false,
+            thought: isThought,
             eventId: chunkJson.id
           };
           if (renderedContent) {
@@ -1069,7 +1058,10 @@ export const useADKChatStore = defineStore("adkChatStore", {
             this.streamingTextMessage.renderedContent =
               chunkJson.groundingMetadata.searchEntryPoint.renderedContent;
           }
-          if (newChunk == this.streamingTextMessage.text) {
+          if (
+            newChunk == this.streamingTextMessage.text ||
+            isThought !== this.streamingTextMessage.thought
+          ) {
             this.storeEvents(part, chunkJson);
             this.eventMessageIndexArray[index] = newChunk;
             this.streamingTextMessage = null;
